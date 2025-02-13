@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+
+[project]
+name = "bvmodelgen"
+version = "0.0.0"
+authors = [
+  { name="Javiera Jilberto", email="jilberto@umich.edu" },
+]
+description = "Python scripts to generate biventricle models from MRI images"
+readme = "README.md"
+license = { file="LICENSE" }
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+  "numpy",
+  "matplotlib",
+  "scipy",
+  "scikit-image",
+  "monai",
+  "nibabel",
+  "tqdm",
+  "meshio",
+  "trimesh",
+  "pymmg",
+  "shapely",
+  "plotly",
+  "cvxopt",
+  "pandas"
+]

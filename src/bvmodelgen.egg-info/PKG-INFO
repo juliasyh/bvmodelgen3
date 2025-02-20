@@ -22,3 +22,9 @@ Requires-Dist: shapely
 Requires-Dist: plotly
 Requires-Dist: cvxopt
 Requires-Dist: pandas
+
+### TODO list
+* Smooth valve position
+* Do a spatial smoothing of points
+    * You need to generate a tet template mesh
+* Calculate chamber and ventricle volumes.

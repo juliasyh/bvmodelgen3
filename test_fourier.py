@@ -44,26 +44,31 @@ for i in range(2,32):
     surface.points = points=xyzs[2] + smoothed_disp_reshape[i]
     io.write(f'test_data/Images/img2model/frame{i-2}_bv_surface_smoothed.stl', surface)
 
-#%%
-# Plot the displacements
+# #%%
+# # Plot the displacements
 
-print('Plotting...')
-fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
+# print('Plotting...')
+# fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
 
-# Plot the displacements
-color=['r', 'g', 'b']
-ax1.plot(flatten_disp[0], '--', alpha=0.5, color=color[0])
-ax1.plot(smoothed_disp[0], color=color[0])
-ax1.set_xlabel('Frame')
-ax1.set_ylabel('Displacement')
-ax1.set_title('Displacement of Point 1 Over Time')
-ax1.grid(True)
+# # Plot the displacements
+# color=['r', 'g', 'b']
+# ax1.plot(flatten_disp[0], '--', alpha=0.5, color=color[0])
+# ax1.plot(smoothed_disp[0], color=color[0])
+# ax1.set_xlabel('Frame')
+# ax1.set_ylabel('Displacement')
+# ax1.set_title('Displacement of Point 1 Over Time')
+# ax1.grid(True)
 
-# Plot the Fourier transform
-ax2.plot(freqs, np.abs(fourier_transform[0]))
-ax2.set_xlabel('Frequency')
-ax2.set_ylabel('Amplitude')
-ax2.set_title('Fourier Transform of Displacement')
+# # Plot the Fourier transform
+# ax2.plot(freqs, np.abs(fourier_transform[0]))
+# ax2.set_xlabel('Frequency')
+# ax2.set_ylabel('Amplitude')
+# ax2.set_title('Fourier Transform of Displacement')
 
-plt.tight_layout()
-plt.show()
+# plt.tight_layout()
+# plt.show()
+
+# #%% Use fenicsx to smooth in space
+# import dolfinxio as io
+# vol_ien = np.load('src/bvfitting/template/volume_template_ien.npy')
+# points = xyzs[2]

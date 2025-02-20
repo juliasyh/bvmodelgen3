@@ -1,3 +1,4 @@
+README.md
 pyproject.toml
 src/CMRnn.py
 src/PatientData.py
@@ -14,6 +15,8 @@ src/bvfitting/__init__.py
 src/bvfitting/build_model_tools.py
 src/bvfitting/fitting_tools.py
 src/bvfitting/surface_enum.py
+src/bvfitting/template/modify_template.py
+src/bvfitting/template/volume_mesh/generate_template_mesh.py
 src/bvmodelgen.egg-info/PKG-INFO
 src/bvmodelgen.egg-info/SOURCES.txt
 src/bvmodelgen.egg-info/dependency_links.txt

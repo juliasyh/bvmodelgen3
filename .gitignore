@@ -1,1 +1,4 @@
 test_data/
+*.vtu
+*.stl
+*.png

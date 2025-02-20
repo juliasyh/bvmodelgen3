@@ -11,6 +11,7 @@ import os
 import numpy as np
 import nibabel as nib
 import meshio as io
+import cheartio as chio
 
 from tqdm import tqdm
 
@@ -230,7 +231,7 @@ class PatientData:
         
 
     def fit_templates(self, which_frames=None, mesh_subdivisions=2, weight_GP=1, low_smoothing_weight=10, 
-                      transmural_weight=20, rv_thickness=3, reuse_control_points=False):
+                      transmural_weight=20, rv_thickness=3, reuse_control_points=False, make_vol_mesh=False):
         # Deal with which_frames
         if which_frames is None:
             which_frames = range(self.cmr_data.nframes)
@@ -241,7 +242,10 @@ class PatientData:
 
         self.surface_meshes = []
         load_control_points = None
-        for frame in which_frames:
+        for frame in range(self.cmr_data.nframes):
+            if frame not in which_frames:
+                self.surface_meshes.append(None)
+                continue
             print(f'Fitting template for frame {frame}...')
             frame_prefix = f'{self.img2model_fldr}/frame{frame}_'
 
@@ -254,9 +258,86 @@ class PatientData:
             surface_mesh.fit_template(weight_GP, low_smoothing_weight, transmural_weight, rv_thickness)
             surface_mesh.save_mesh(mesh_subdivisions)
 
+            if make_vol_mesh:
+                vol_mesh = surface_mesh.make_volumetric_mesh()
+                io.write(f'{frame_prefix}vol_mesh.vtu', vol_mesh)
+
             self.surface_meshes.append(surface_mesh)
 
             print('-------------------------------------------\n')
+
+
+    def calculate_chamber_volumes(self, which_frames=None):
+        # Deal with which_frames
+        if which_frames is None:
+            which_frames = range(self.cmr_data.nframes)
+        elif isinstance(which_frames, int):
+            which_frames = [which_frames]
+        else:
+            which_frames = list(which_frames)
+
+        lv_volume = []
+        rv_volume = []
+
+        for frame in range(self.cmr_data.nframes):
+            if frame not in which_frames:
+                lv_volume.append(None)
+                rv_volume.append(None)
+                continue
+            surface_mesh = self.surface_meshes[frame]
+            lv, rv = surface_mesh.bvmodel.calculate_chamber_volumes()
+            lv_volume.append(lv)
+            rv_volume.append(rv)
+
+        which_frames = np.array(which_frames)
+
+        # Save the volumes
+        lv_volume = np.array(lv_volume)[which_frames]
+        save = np.column_stack((which_frames, lv_volume))
+        chio.write_dfile(f'{self.output_fldr}/lv_volumes.txt', save)
+        
+        rv_volume = np.array(rv_volume)[which_frames]
+        save = np.column_stack((which_frames, rv_volume))
+        chio.write_dfile(f'{self.output_fldr}/rv_volumes.txt', save)
+
+        return lv_volume, rv_volume
+        
+    def calculate_wall_volumes(self, which_frames=None):
+        # Deal with which_frames
+        if which_frames is None:
+            which_frames = range(self.cmr_data.nframes)
+        elif isinstance(which_frames, int):
+            which_frames = [which_frames]
+        else:
+            which_frames = list(which_frames)
+
+        lv_volume = []
+        rv_volume = []
+
+        for frame in range(self.cmr_data.nframes):
+            if frame not in which_frames:
+                lv_volume.append(None)
+                rv_volume.append(None)
+                continue
+            surface_mesh = self.surface_meshes[frame]
+            lv, rv = surface_mesh.bvmodel.calculate_wall_volumes()
+            lv_volume.append(lv)
+            rv_volume.append(rv)
+
+        which_frames = np.array(which_frames)
+
+        # Save the volumes
+        lv_volume = np.array(lv_volume)[which_frames]
+        save = np.column_stack((which_frames, lv_volume))
+        chio.write_dfile(f'{self.output_fldr}/lv_wall_volumes.txt', save)
+        
+        rv_volume = np.array(rv_volume)[which_frames]
+        save = np.column_stack((which_frames, rv_volume))
+        chio.write_dfile(f'{self.output_fldr}/rv_wall_volumes.txt', save)
+
+        return lv_volume, rv_volume
+        
+
 
 
 
@@ -585,7 +666,8 @@ class ViewSegData:
 
                 # Get segmentations
                 lv = np.isclose(slc, labels['lv'])
-                rv = np.isclose(slc, labels['rv'])
+                rv = np.isclose(slc, labels['rv']) 
+                if view == 'la_2ch': rv[:] = 0
                 lvbp = np.isclose(slc, labels['lvbp'])
 
                 mask = lv+rv+lvbp
@@ -798,6 +880,7 @@ class BVSurface:
         model_path = "src/bvfitting/template" # folder of the control mesh
         self.bvmodel = BiventricularModel(model_path, filemod='_mod')
 
+
         if load_control_points:
             self.bvmodel.control_mesh = np.load(load_control_points)
             self.bvmodel.et_pos = np.linalg.multi_dot([self.bvmodel.matrix,
@@ -874,3 +957,10 @@ class BVSurface:
         # Save control points
         np.save(self.out_prefix + 'control_points.npy', self.bvmodel.control_mesh)
 
+
+    def make_volumetric_mesh(self):
+        volumetric_ien = np.load('src/bvfitting/template/volume_template_ien.npy')
+        bvmesh, _, _ = self.bvmodel.get_bv_surface_mesh()
+        mesh = io.Mesh(bvmesh.points, {'tetra': volumetric_ien})
+        return mesh
+    

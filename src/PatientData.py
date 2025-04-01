@@ -20,8 +20,9 @@ from seg2contours import ViewSegFrame, SegSliceContour, add_apex, add_rv_apex
 from segutils import remove_base_nodes, writeResults
 import segutils as su
 import plotutils as pu
-import slicealign as slicealign
 import valveutils as vu
+import modelutils as mu
+import slicealign as slicealign
 from bvfitting import BiventricularModel, GPDataSet, ContourType
 
 class PatientData:
@@ -45,6 +46,10 @@ class PatientData:
         self.img2model_fldr = f'{self.output_fldr}/img2model/'
         self.seg_paths = None
         self.cmr_data = None
+
+        # List containing the meshes
+        self.surface_meshes = []
+        self.volume_meshes = []
 
 
     @staticmethod
@@ -242,6 +247,10 @@ class PatientData:
 
         self.surface_meshes = []
         load_control_points = None
+
+        if make_vol_mesh:
+            self.volume_meshes = []
+
         for frame in range(self.cmr_data.nframes):
             if frame not in which_frames:
                 self.surface_meshes.append(None)
@@ -253,18 +262,63 @@ class PatientData:
             if reuse_control_points and frame > 0:
                 load_control_points = f'{self.img2model_fldr}/frame{frame-1}_control_points.npy'
 
-            surface_mesh = BVSurface(filename, frame_prefix, weight_GP, load_control_points=load_control_points)
+            template = FittedTemplate(filename, frame_prefix, weight_GP, load_control_points=load_control_points)
 
-            surface_mesh.fit_template(weight_GP, low_smoothing_weight, transmural_weight, rv_thickness)
-            surface_mesh.save_mesh(mesh_subdivisions)
+            template.fit_template(weight_GP, low_smoothing_weight, transmural_weight, rv_thickness)
+            surface_mesh = template.bvmodel.get_template_mesh()
 
             if make_vol_mesh:
-                vol_mesh = surface_mesh.make_volumetric_mesh()
-                io.write(f'{frame_prefix}vol_mesh.vtu', vol_mesh)
+                vol_mesh = template.make_volumetric_mesh()
+                self.volume_meshes.append(vol_mesh)
 
             self.surface_meshes.append(surface_mesh)
 
             print('-------------------------------------------\n')
+
+
+    def smooth_surfaces_in_time(self, which_frames=None):
+        # Deal with which_frames
+        if which_frames is None:
+            which_frames = range(self.cmr_data.nframes)
+        elif isinstance(which_frames, int):
+            which_frames = [which_frames]
+        else:
+            which_frames = list(which_frames)
+
+        # Only do this if the whole cycle is considered
+        if len(which_frames) != self.cmr_data.nframes:
+            print('Smoothing BV surfaces in time is only available for the whole cycle. \n'
+                  'Returning without smoothing.')
+            return
+
+        print('Smoothing BV surfaces in time...')
+
+        # Smooth the surfaces
+        smooth_surfaces = mu.fourier_time_smoothing(self.surface_meshes)
+        self.surface_meshes = smooth_surfaces
+
+
+    def save_bv_surfaces(self, which_frames=None, save_volumes=False):
+        # Deal with which_frames
+        if which_frames is None:
+            which_frames = range(self.cmr_data.nframes)
+        elif isinstance(which_frames, int):
+            which_frames = [which_frames]
+        else:
+            which_frames = list(which_frames)
+
+        for frame in range(self.cmr_data.nframes):
+            if frame not in which_frames:
+                continue
+            surface_mesh = self.surface_meshes[frame]
+            surface_mesh.save_mesh(f'{self.img2model_fldr}/frame{frame}_bv_surface.vtu')
+
+            if save_volumes:
+                vol_mesh = surface_mesh.make_volumetric_mesh()
+                self.volume_meshes.append(vol_mesh)
+                vol_mesh.save(f'{self.img2model_fldr}/frame{frame}_bv_volume.vtu')
+
+
 
 
     def calculate_chamber_volumes(self, which_frames=None):
@@ -302,6 +356,7 @@ class PatientData:
 
         return lv_volume, rv_volume
         
+
     def calculate_wall_volumes(self, which_frames=None):
         # Deal with which_frames
         if which_frames is None:
@@ -861,7 +916,7 @@ class CMRValveData:
                 np.save(f'{self.output_fldr}/{view}_tv_centroids.npy', self.tv_centroids[view])
 
 
-class BVSurface:
+class FittedTemplate:
     template_fitting_weights = {'apex_endo': 2, 'apex_epi': 2, 'mv': 1., 'tv': 1, 'av': 1.5, 'pv': 1,
                                 'mv_phantom': 2, 'tv_phantom': 1., 'av_phantom': 2., 'pv_phantom': 1,
                                 'rv_insert': 1.5,
@@ -880,6 +935,11 @@ class BVSurface:
         model_path = "src/bvfitting/template" # folder of the control mesh
         self.bvmodel = BiventricularModel(model_path, filemod='_mod')
 
+        # Initialize surface meshes
+        self.bvmesh = None
+        self.valve_mesh = None
+        self.septum_mesh = None
+        self.template_mesh = None
 
         if load_control_points:
             self.bvmodel.control_mesh = np.load(load_control_points)
@@ -946,13 +1006,20 @@ class BVSurface:
 
         pu.plot_surface(model, contourPlots, out_path=self.out_prefix + 'step2_fitted.html')
 
+        self.template_mesh = self.bvmodel.get_template_mesh()
+
+
+    def get_surface_mesh(self, mesh_subdivisions=2):
+        self.bvmesh, self.valve_mesh, self.septum_mesh = self.bvmodel.get_bv_surface_mesh(subdivisions=mesh_subdivisions)
+
 
     def save_mesh(self, mesh_subdivisions):
         # Save .stl and control points
-        bvmesh, valve_mesh, septum_mesh = self.bvmodel.get_bv_surface_mesh(subdivisions=mesh_subdivisions)
-        io.write(self.out_prefix + 'bv_surface.stl', bvmesh)
-        io.write(self.out_prefix + 'valve_surfaces.stl', valve_mesh)
-        io.write(self.out_prefix + 'septum_surface.stl', septum_mesh)
+        self.get_surface_mesh(mesh_subdivisions=mesh_subdivisions)
+        
+        io.write(self.out_prefix + 'bv_surface.stl', self.bvmesh)
+        io.write(self.out_prefix + 'valve_surfaces.stl', self.valve_mesh)
+        io.write(self.out_prefix + 'septum_surface.stl', self.septum_mesh)
 
         # Save control points
         np.save(self.out_prefix + 'control_points.npy', self.bvmodel.control_mesh)
@@ -964,3 +1031,7 @@ class BVSurface:
         mesh = io.Mesh(bvmesh.points, {'tetra': volumetric_ien})
         return mesh
     
+
+class BVSurface:
+    def __init__(self, template_mesh):
+        self.mesh = template_mesh

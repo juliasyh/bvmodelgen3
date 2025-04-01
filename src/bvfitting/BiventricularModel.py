@@ -2208,6 +2208,14 @@ class BiventricularModel():
             septum_mesh = io.Mesh(points, {'triangle': cells[sep_marker]})
 
         return mesh, valve_mesh, septum_mesh
+    
+
+    def get_template_mesh(self):
+        points = self.et_pos
+        cells = self.et_indices
+
+        return io.Mesh(points, {'triangle': cells})
+
 
     def get_chamber_meshes(self):
         points = self.et_pos

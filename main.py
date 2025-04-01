@@ -7,37 +7,66 @@ Created on Sun May 26 14:26:30 2023
 """
 
 import os
+import numpy as np
 from PatientData import PatientData
 
 if __name__ ==  '__main__':
+
     # Inputs
-    patient = 'ZS-11'
-    path = 'test_data/Images/'
+    output_path = 'test_data/Images/'
+    imgs_path = 'test_data/Images/'
 
-    imgs = {'sa': path + 'SA',
-            'la_2ch': path + 'LA_2CH',
-            'la_3ch': path + 'LA_3CH',
-            'la_4ch': path + 'LA_4CH'}
+    imgs = {'sa': imgs_path + 'SA',
+            'la_2ch': imgs_path + 'LA_2CH',
+            'la_3ch': imgs_path + 'LA_3CH',
+            'la_4ch': imgs_path + 'LA_4CH'}
 
+    # Which frames to process
+    which_frames = [0]
 
-    segs = {'sa': path + 'sa_seg',
-            'la_2ch': path + 'la_2ch_seg',
-            'la_3ch': path + 'la_3ch_seg',
-            'la_4ch': path + 'la_4ch_seg'}
-    
-    valves = {'la_2ch': path + 'LA_2CH_valves',
-              'la_3ch': path + 'LA_3CH_valves',
-              'la_4ch': path + 'LA_4CH_valves'}
-    
-    pdata = PatientData(imgs, path)
-#     pdata.unet_generate_segmentations()
-    import numpy as np
-    which_frames = np.arange(13, 30).tolist()
+    # Options
+    nn_segmentation = False
+    align_segmentations = True
+    visualize = False
+    smooth_in_time = True
+    correct_using_volumes = True
+
+    # Paths to the valve segmentations    
+    valves_3ch_slice = [1]  # The slice to use for the 3-chamber view. Only use one slice!
+    valves = {'la_3ch': imgs_path + 'LA_3CH_valves',    # Note that 2CH is not needed
+              'la_4ch': imgs_path + 'LA_4CH_valves'}
+
+    # Paths to segmentations. Note that if nn_segmentation is True, these paths are not used.    
+    segs = {'sa': imgs_path + 'sa_seg',
+            'la_2ch': imgs_path + 'la_2ch_seg',
+            'la_3ch': imgs_path + 'la_3ch_seg',
+            'la_4ch': imgs_path + 'la_4ch_seg'}
+
+    # Initialize the PatientData object
+    pdata = PatientData(imgs, output_path)
+
+    # Segment the images
+    if nn_segmentation:
+        segs = pdata.unet_generate_segmentations(segs)
+
+    # Generate geometry
     pdata.load_segmentations(segs)
-    pdata.cmr_data.extract_contours(visualize=False, align=True, which_frames=which_frames)
-    pdata.find_valves(valves, slices_3ch=[1], visualize=False)
-    pdata.generate_contours(which_frames=which_frames, visualize=False)
-    pdata.fit_templates(which_frames=which_frames, mesh_subdivisions=0, make_vol_mesh=True)
+    pdata.cmr_data.extract_contours(visualize=visualize, align=align_segmentations, which_frames=which_frames)
+    pdata.find_valves(valves, slices_3ch=valves_3ch_slice, visualize=visualize)
+    pdata.generate_contours(which_frames=which_frames, visualize=visualize)
+
+    if smooth_in_time:
+        mesh_subdivisions = 0
+        pdata.fit_templates(which_frames=which_frames, mesh_subdivisions=mesh_subdivisions)
+        pdata.smooth_surfaces_in_time()
+    else:
+        # No postprocess, meshes are saved after fitting
+        mesh_subdivisions = 2
+        pdata.fit_templates(which_frames=which_frames, mesh_subdivisions=mesh_subdivisions)
+        pdata.save_meshes(which_frames=which_frames)
+
+
+    # Calculate volumes
     lv_volume, rv_volume = pdata.calculate_chamber_volumes(which_frames=which_frames)
     print('LV volume: ', lv_volume)
     print('RV volume: ', rv_volume)

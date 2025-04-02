@@ -2,6 +2,7 @@ README.md
 pyproject.toml
 src/CMRnn.py
 src/PatientData.py
+src/modelutils.py
 src/niftiutils.py
 src/plotutils.py
 src/seg2contours.py
@@ -17,6 +18,10 @@ src/bvfitting/fitting_tools.py
 src/bvfitting/surface_enum.py
 src/bvfitting/template/modify_template.py
 src/bvfitting/template/volume_mesh/generate_template_mesh.py
+src/bvfitting/template/work_template_scripts/laplace_rv_problems.py
+src/bvfitting/template/work_template_scripts/make_rv_field.py
+src/bvfitting/template/work_template_scripts/make_vol_template_bfile.py
+src/bvfitting/template/work_template_scripts/modify_template_bdata.py
 src/bvmodelgen.egg-info/PKG-INFO
 src/bvmodelgen.egg-info/SOURCES.txt
 src/bvmodelgen.egg-info/dependency_links.txt

@@ -121,11 +121,12 @@ def get_surface_normals(points, ien, vol_elems=None):
     return normal
 
 #%%
-template = io.read('src/bvfitting/template/template.vtu')
-map_template_to_bv = np.load('src/bvfitting/template/template_to_bv_map.npy')
-map_bv_to_template = np.load('src/bvfitting/template/bv_to_template_map.npy')
+template = io.read('../src/bvfitting/template/template.vtu')
+map_template_to_bv = np.load('../src/bvfitting/template/template_to_bv_map.npy')
+map_bv_to_template = np.load('../src/bvfitting/template/bv_to_template_map.npy')
 surfs = template.cell_data['Region'][0]
 rv_distance_field = 1-template.point_data['rv_distance_field']
+np.save('../src/bvfitting/template/rv_distance_field.npy', rv_distance_field)
 
 xyz = template.points
 ien = template.cells[0].data

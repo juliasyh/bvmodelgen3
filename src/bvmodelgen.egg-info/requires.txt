@@ -12,3 +12,4 @@ shapely
 plotly
 cvxopt
 pandas
+pyvista

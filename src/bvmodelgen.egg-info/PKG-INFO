@@ -1,4 +1,4 @@
-Metadata-Version: 2.2
+Metadata-Version: 2.4
 Name: bvmodelgen
 Version: 0.0.0
 Summary: Python scripts to generate biventricle models from MRI images
@@ -22,6 +22,7 @@ Requires-Dist: shapely
 Requires-Dist: plotly
 Requires-Dist: cvxopt
 Requires-Dist: pandas
+Requires-Dist: pyvista
 
 ### TODO list
 * Smooth valve position

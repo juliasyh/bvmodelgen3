@@ -32,5 +32,6 @@ dependencies = [
   "shapely",
   "plotly",
   "cvxopt",
-  "pandas"
+  "pandas",
+  "pyvista"
 ]

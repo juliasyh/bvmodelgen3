@@ -47,7 +47,8 @@ class PatientData:
         self.seg_paths = None
         self.cmr_data = None
 
-        # List containing the meshes
+        # Initialize dummy template and list containing the meshes
+        self.template = FittedTemplate(self.img2model_fldr)
         self.surface_meshes = []
         self.volume_meshes = []
 
@@ -235,7 +236,7 @@ class PatientData:
                 fig.show()
         
 
-    def fit_templates(self, which_frames=None, mesh_subdivisions=2, weight_GP=1, low_smoothing_weight=10, 
+    def fit_templates(self, which_frames=None, weight_GP=1, low_smoothing_weight=10, 
                       transmural_weight=20, rv_thickness=3, reuse_control_points=False, make_vol_mesh=False):
         # Deal with which_frames
         if which_frames is None:
@@ -262,7 +263,8 @@ class PatientData:
             if reuse_control_points and frame > 0:
                 load_control_points = f'{self.img2model_fldr}/frame{frame-1}_control_points.npy'
 
-            template = FittedTemplate(filename, frame_prefix, weight_GP, load_control_points=load_control_points)
+            template = FittedTemplate(frame_prefix)
+            template.load_dataset(filename, weight_GP, load_control_points=load_control_points)
 
             template.fit_template(weight_GP, low_smoothing_weight, transmural_weight, rv_thickness)
             surface_mesh = template.bvmodel.get_template_mesh()
@@ -275,8 +277,12 @@ class PatientData:
 
             print('-------------------------------------------\n')
 
+        if make_vol_mesh:
+            return self.surface_meshes, self.volume_meshes
+        return self.surface_meshes
 
-    def smooth_surfaces_in_time(self, which_frames=None):
+
+    def smooth_surfaces_in_time(self, surfaces, which_frames=None):
         # Deal with which_frames
         if which_frames is None:
             which_frames = range(self.cmr_data.nframes)
@@ -294,11 +300,13 @@ class PatientData:
         print('Smoothing BV surfaces in time...')
 
         # Smooth the surfaces
-        smooth_surfaces = mu.fourier_time_smoothing(self.surface_meshes)
+        smooth_surfaces = mu.fourier_time_smoothing(surfaces)
         self.surface_meshes = smooth_surfaces
 
+        return self.surface_meshes
 
-    def save_bv_surfaces(self, which_frames=None, save_volumes=False):
+
+    def correct_surfaces_by_volumes(self, surfaces, which_frames=None):
         # Deal with which_frames
         if which_frames is None:
             which_frames = range(self.cmr_data.nframes)
@@ -306,22 +314,98 @@ class PatientData:
             which_frames = [which_frames]
         else:
             which_frames = list(which_frames)
+
+        # Only do this if the whole cycle is considered
+        if len(which_frames) != self.cmr_data.nframes:
+            print('Correcting BV surfaces by volumes is only available for the whole cycle. \n'
+                'Returning without correcting.')
+            return
+        
+        print('Correcting BV surfaces by volumes...')
+        labels = self.template.labels
+        new_surfaces = mu.volume_match_correction(surfaces, labels)
+        self.surface_meshes = new_surfaces
+
+        return self.surface_meshes
+
+
+    def load_surfaces(self, which_frames=None):
+        """
+        Loads the surfaces from a file.
+
+        Args:
+            path (str): The path to the file containing the surfaces.
+
+        Returns:
+            list: A list of loaded surfaces.
+        """
+        # Deal with which_frames
+        if which_frames is None:
+            which_frames = range(self.cmr_data.nframes)
+        elif isinstance(which_frames, int):
+            which_frames = [which_frames]
+        else:
+            which_frames = list(which_frames)
+
+        surfaces = []
+        for frame in range(self.cmr_data.nframes):
+            if frame not in which_frames:
+                surfaces.append(None)
+                continue
+            surface_mesh = io.read(f'{self.img2model_fldr}/frame{frame}_template.stl')
+            surfaces.append(surface_mesh)
+            self.surface_meshes.append(surface_mesh)
+
+        return surfaces
+    
+
+    def save_bv_surfaces(self, surfaces, mesh_subdivisions=0, which_frames=None, save_volumes=False):
+        # Deal with which_frames
+        if which_frames is None:
+            which_frames = range(self.cmr_data.nframes)
+        elif isinstance(which_frames, int):
+            which_frames = [which_frames]
+        else:
+            which_frames = list(which_frames)
+
+        # Grab infor from the template
+        labels = self.template.labels
+        bv_regions = self.template.bv_labels
+        valve_regions = self.template.valve_labels
+        septum_regions = self.template.septum_labels
 
         for frame in range(self.cmr_data.nframes):
             if frame not in which_frames:
                 continue
-            surface_mesh = self.surface_meshes[frame]
-            surface_mesh.save_mesh(f'{self.img2model_fldr}/frame{frame}_bv_surface.vtu')
+            surface_mesh = surfaces[frame]
+
+            # Extract bvmesh
+            bvmesh = mu.extract_subregion(surface_mesh, labels, bv_regions)
+
+            # Extract valve mesh
+            valve_mesh = mu.extract_subregion(surface_mesh, labels, valve_regions)
+
+            # Extract septum mesh
+            septum_mesh = mu.extract_subregion(surface_mesh, labels, septum_regions)
+
+            # Subdivide the mesh
+            if mesh_subdivisions > 0:
+                bvmesh = mu.subdivide_mesh(bvmesh, mesh_subdivisions)
+                valve_mesh = mu.subdivide_mesh(valve_mesh, mesh_subdivisions)
+                septum_mesh = mu.subdivide_mesh(septum_mesh, mesh_subdivisions)
+
+            io.write(f'{self.img2model_fldr}/frame{frame}_template.stl', surface_mesh)
+            io.write(f'{self.img2model_fldr}/frame{frame}_bv_surface.stl', bvmesh)
+            io.write(f'{self.img2model_fldr}/frame{frame}_valve_surfaces.stl', valve_mesh)
+            io.write(f'{self.img2model_fldr}/frame{frame}_septum_surface.stl', septum_mesh)
 
             if save_volumes:
-                vol_mesh = surface_mesh.make_volumetric_mesh()
-                self.volume_meshes.append(vol_mesh)
-                vol_mesh.save(f'{self.img2model_fldr}/frame{frame}_bv_volume.vtu')
+                vol_mesh = self.volume_meshes[frame]
+                io.write(f'{self.img2model_fldr}/frame{frame}_bv_volume.vtu', vol_mesh)
 
 
-
-
-    def calculate_chamber_volumes(self, which_frames=None):
+    def calculate_chamber_volumes(self, surfaces, which_frames=None):
+        #TODO add option to enter a bv surface mesh instead of a template mesh
         # Deal with which_frames
         if which_frames is None:
             which_frames = range(self.cmr_data.nframes)
@@ -330,18 +414,20 @@ class PatientData:
         else:
             which_frames = list(which_frames)
 
-        lv_volume = []
-        rv_volume = []
+        lv_volume = np.zeros(self.cmr_data.nframes)
+        rv_volume = np.zeros(self.cmr_data.nframes)
 
+        labels = self.template.labels
         for frame in range(self.cmr_data.nframes):
             if frame not in which_frames:
                 lv_volume.append(None)
                 rv_volume.append(None)
                 continue
-            surface_mesh = self.surface_meshes[frame]
-            lv, rv = surface_mesh.bvmodel.calculate_chamber_volumes()
-            lv_volume.append(lv)
-            rv_volume.append(rv)
+            surface_mesh = surfaces[frame]
+            xyz = surface_mesh.points
+            ien = surface_mesh.cells[0].data
+
+            lv_volume[frame], rv_volume[frame] = mu.calculate_chamber_volumes(xyz, ien, labels)
 
         which_frames = np.array(which_frames)
 
@@ -357,7 +443,7 @@ class PatientData:
         return lv_volume, rv_volume
         
 
-    def calculate_wall_volumes(self, which_frames=None):
+    def calculate_wall_volumes(self, surfaces, which_frames=None):
         # Deal with which_frames
         if which_frames is None:
             which_frames = range(self.cmr_data.nframes)
@@ -366,32 +452,33 @@ class PatientData:
         else:
             which_frames = list(which_frames)
 
-        lv_volume = []
-        rv_volume = []
+        lv_wall_volume = np.zeros(self.cmr_data.nframes)
+        rv_wall_volume = np.zeros(self.cmr_data.nframes)
 
+        labels = self.template.labels
         for frame in range(self.cmr_data.nframes):
             if frame not in which_frames:
-                lv_volume.append(None)
-                rv_volume.append(None)
+                lv_wall_volume.append(None)
+                rv_wall_volume.append(None)
                 continue
-            surface_mesh = self.surface_meshes[frame]
-            lv, rv = surface_mesh.bvmodel.calculate_wall_volumes()
-            lv_volume.append(lv)
-            rv_volume.append(rv)
+            surface_mesh = surfaces[frame]
+            xyz = surface_mesh.points
+            ien = surface_mesh.cells[0].data
+
+            lv_wall_volume[frame], rv_wall_volume[frame] = mu.calculate_wall_volumes(xyz, ien, labels)
 
         which_frames = np.array(which_frames)
 
         # Save the volumes
-        lv_volume = np.array(lv_volume)[which_frames]
+        lv_volume = np.array(lv_wall_volume)[which_frames]
         save = np.column_stack((which_frames, lv_volume))
         chio.write_dfile(f'{self.output_fldr}/lv_wall_volumes.txt', save)
         
-        rv_volume = np.array(rv_volume)[which_frames]
+        rv_volume = np.array(rv_wall_volume)[which_frames]
         save = np.column_stack((which_frames, rv_volume))
         chio.write_dfile(f'{self.output_fldr}/rv_wall_volumes.txt', save)
 
         return lv_volume, rv_volume
-        
 
 
 
@@ -520,12 +607,12 @@ class CMRSegData:
             found = 0
             for view in  nslices.keys():
                 try:
-                    print('Loading translation file for ' + view + '...')
                     translations[view] = np.load(f'{translation_files_prefix}{view.lower()}_translations.npy')
                     found += 1
                 except:
                     print('Translation file for ' + view + ' not found.')
                     continue
+                print('Loading translation file for ' + view + '...')
 
             if found == 0:
                 # Compute alignment
@@ -921,19 +1008,29 @@ class FittedTemplate:
                                 'mv_phantom': 2, 'tv_phantom': 1., 'av_phantom': 2., 'pv_phantom': 1,
                                 'rv_insert': 1.5,
                                 'la_rv_endo': 3, 'la_rv_epi': 2, 'la_lv_endo': 2, 'la_lv_epi': 1,
-                                'sa_lv_epi': 1, 'sa_lv_endo': 2, 'sa_rv_endo': 1, 'sa_rv_epi': 1}
+                                'sa_lv_epi': 1, 'sa_lv_endo': 2, 'sa_rv_endo': 1, 'sa_rv_epi': 1 }
     
 
-    def __init__(self, filename, out_prefix, weight_GP, load_control_points=None):
+    def __init__(self, out_prefix):
         self.out_prefix = out_prefix
-        self.load_control_points = load_control_points
-
-        # Filename containing guide points (from contours/masks)
-        self.dataset = GPDataSet(filename)
+        self.load_control_points = None
 
         # Loads biventricular control_mesh
         model_path = "src/bvfitting/template" # folder of the control mesh
         self.bvmodel = BiventricularModel(model_path, filemod='_mod')
+        self.labels = self.bvmodel.surfs
+        self.patches = {'lv_endo': 0,
+                        'lv_epi': 8,
+                        'rv_endo': 2,
+                        'rv_epi': 3,
+                        'rv_septum': 1,
+                        'rvlv': 9,
+                        'mv': 12,
+                        'tv': 13,
+                        'av': 10,
+                        'pv': 11,}
+
+        self.dataset = None
 
         # Initialize surface meshes
         self.bvmesh = None
@@ -941,6 +1038,18 @@ class FittedTemplate:
         self.septum_mesh = None
         self.template_mesh = None
 
+        # List of labels for each region of interest
+        self.bv_labels = [0,8,2,3,1,9,10,11,12,13]
+        self.valve_labels = [12,13,10,11]
+        self.septum_labels = [1]
+            
+
+    def load_dataset(self, filename, weight_GP, load_control_points=None):
+        # Filename containing guide points (from contours/masks)
+        self.dataset = GPDataSet(filename)
+        self.load_control_points = None
+
+        # Load position
         if load_control_points:
             self.bvmodel.control_mesh = np.load(load_control_points)
             self.bvmodel.et_pos = np.linalg.multi_dot([self.bvmodel.matrix,

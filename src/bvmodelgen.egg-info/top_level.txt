@@ -1,6 +1,7 @@
 CMRnn
 PatientData
 bvfitting
+modelutils
 niftiutils
 plotutils
 seg2contours

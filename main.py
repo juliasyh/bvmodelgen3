@@ -17,7 +17,7 @@ if __name__ ==  '__main__':
     ##############################################################
 
     # Options
-    nn_segmentation = False     # Use nn to create segmentations, if False, it will load them from the paths defined in segs
+    nn_segmentation = True     # Use nn to create segmentations, if False, it will load them from the paths defined in segs
     align_segmentations = True
     visualize = False
     smooth_in_time = True
@@ -25,8 +25,8 @@ if __name__ ==  '__main__':
     load_surfaces = False       # Load surfaces from output folder instead of generating them
 
     # Inputs
-    output_path = 'test_data/Images/'   # where all the output will be saved
-    imgs_path = 'test_data/Images/'     # Dummy variable to define common paths, not truly needed if you define the paths directly
+    output_path = 'test_data/'   # where all the output will be saved
+    imgs_path = 'test_data/'     # Dummy variable to define common paths, not truly needed if you define the paths directly
 
     imgs = {'sa': imgs_path + 'SA',
             'la_2ch': imgs_path + 'LA_2CH',

@@ -6,8 +6,6 @@ Created on Sun May 26 14:26:30 2023
 @author: Javiera Jilberto Vallejos
 """
 
-import os
-import numpy as np
 from PatientData import PatientData
 
 if __name__ ==  '__main__':

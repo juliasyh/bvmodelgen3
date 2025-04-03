@@ -132,10 +132,9 @@ class PatientData:
 
             print(f'Finished label prediction for {view} view.')
             seg_paths[view] = f'{working_fldr}/{view}_seg.nii.gz'
-        self.cmr_data = CMRSegData(self.seg_paths, self.output_fldr)
-
 
         return seg_paths
+
 
     def find_valves(self, valve_paths, visualize=False, load_from_nii=False, 
                     slices_2ch=[], slices_3ch=[], slices_4ch=[]) -> None:

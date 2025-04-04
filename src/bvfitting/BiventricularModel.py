@@ -2267,10 +2267,6 @@ class BiventricularModel():
     def calculate_wall_volumes(self):
         lv_mesh, rv_mesh = self.get_lv_rv_surface_mesh()
 
-        io.write('check_lv.vtu', lv_mesh)
-        io.write('check_rv.vtu', rv_mesh)
-
-
         return self.get_enclosed_volume(lv_mesh.points, lv_mesh.cells[0].data), \
                self.get_enclosed_volume(rv_mesh.points, rv_mesh.cells[0].data)
 

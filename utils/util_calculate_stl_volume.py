@@ -79,8 +79,6 @@ def get_enclosed_volume(xyz, faces):
 
 def calculate_chamber_volumes(points, cells, surfs):
     lv_mesh, rv_mesh = get_chamber_meshes(points, cells, surfs)
-    io.write('check_rv.vtu', rv_mesh)
-    io.write('check_lv.vtu', lv_mesh)
 
     return get_enclosed_volume(lv_mesh.points, lv_mesh.cells[0].data), \
             get_enclosed_volume(rv_mesh.points, rv_mesh.cells[0].data)

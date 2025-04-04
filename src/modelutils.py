@@ -17,6 +17,8 @@ from scipy.optimize import minimize
 
 from tqdm import tqdm
 
+import pathlib
+filepath=pathlib.Path(__file__).parent.resolve()
 
 def subdivide_mesh(mesh, n):
     """
@@ -109,7 +111,7 @@ def fourier_time_smoothing(surfaces):
 
 def volume_match_correction(surfaces, labels):
     # Load distance field
-    rv_distance_field = np.load('src/bvfitting/template/rv_distance_field.npy')
+    rv_distance_field = np.load(f'{filepath}/bvfitting/template/rv_distance_field.npy')
 
     # Calculate original volumes and initialize models
     lv_volume_og = np.zeros(len(surfaces))
@@ -158,11 +160,10 @@ def volume_match_correction(surfaces, labels):
     # Modify walls to match chamber volumes
     disp = 0.0
     for i in range(len(models)):
-        print(i)
         model = models[i]
 
         target_vol = target_rv_volumes[i]
-        old_lv_vol, old_rv_vol = calculate_chamber_volumes(model.points, model.cells[0].data, labels)
+        _, old_rv_vol = calculate_chamber_volumes(model.points, model.cells[0].data, labels)
 
         if np.abs(old_rv_vol - target_vol) < 1e-5:
             continue
@@ -203,7 +204,6 @@ def volume_match_correction(surfaces, labels):
     disp = 0.0
     target_vol = rv_wall_volume[0]
     for i in range(len(models)):
-        print(i)
         model = models[i]
 
         _, old_rv_vol = calculate_wall_volumes(model.points, model.cells[0].data, labels)
@@ -297,8 +297,6 @@ def get_enclosed_volume(xyz, faces):
 
 def calculate_chamber_volumes(points, cells, surfs):
     lv_mesh, rv_mesh = get_chamber_meshes(points, cells, surfs)
-    io.write('check_rv.vtu', rv_mesh)
-    io.write('check_lv.vtu', lv_mesh)
 
     return get_enclosed_volume(lv_mesh.points, lv_mesh.cells[0].data), \
             get_enclosed_volume(rv_mesh.points, rv_mesh.cells[0].data)

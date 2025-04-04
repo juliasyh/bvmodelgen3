@@ -25,6 +25,9 @@ import modelutils as mu
 import slicealign as slicealign
 from bvfitting import BiventricularModel, GPDataSet, ContourType
 
+import pathlib
+filepath=pathlib.Path(__file__).parent.resolve()
+
 class PatientData:
     def __init__(self, img_paths, output_fldr):
         """
@@ -112,7 +115,7 @@ class PatientData:
         """
 
         try:
-            import src.CMRnn as nn
+            import CMRnn as nn
         except ImportError:
             raise ImportError('NNUNet is not installed. Please install it to use this function.')
 
@@ -1015,7 +1018,7 @@ class FittedTemplate:
         self.load_control_points = None
 
         # Loads biventricular control_mesh
-        model_path = "src/bvfitting/template" # folder of the control mesh
+        model_path = f"{filepath}/bvfitting/template" # folder of the control mesh
         self.bvmodel = BiventricularModel(model_path, filemod='_mod')
         self.labels = self.bvmodel.surfs
         self.patches = {'lv_endo': 0,

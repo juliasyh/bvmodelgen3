@@ -5,7 +5,7 @@ Scripts to generate a 3D geometry for cardiac MRI
 If you have access to the bigblue server, you do not need to install it, just add the correct python to your path. You can set it up so you can use the scripts from both the terminal and in VScode
 ### VScode
 1. Open VScode in Bigblue
-2. Open the VScode options and search Python
+2. Open the VScode options (Ctrl+Shift+P) and search Python.
 3. Select the one that says Python: Select Interpreter
 4. Click on Enter interpreter path
 5. Copy and paste this path: '/home/jilberto/.conda/envs/bvgen3/bin/python' and press enter.

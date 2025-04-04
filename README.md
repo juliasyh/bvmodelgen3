@@ -1,8 +1,21 @@
 # BVModelGen
 Scripts to generate a 3D geometry for cardiac MRI
 
-## Setting up in BigBlue
-If you have access to the bigblue server, you do not need to install it, just add the correct python to your path. You can set it up so you can use the scripts from both the terminal and in VScode
+# Setting up in BigBlue
+If you have access to the bigblue server, you do not need to install the scripts, just set up the correct paths and python interpreter. 
+
+## Setting up the NN paths
+1. Open your '~/.bashrc' file (you can do 'nano ~/.bashrc' if in the terminal or 'code ~/.bashrc' if in VScode).
+2. At the end of the '~/.bashrc' file copy the following (exactly as they are!),
+   ```
+   export nnUNet_raw="/home/jilberto/software/nnUNetv2/nnUNet_raw"
+   export nnUNet_preprocessed="/home/jilberto/software/nnUNetv2/nnUNet_preprocessed"
+   export nnUNet_results="/home/jilberto/software/nnUNetv2/nnUNet_results"
+   ```
+3. Save the '~/.bashrc' file and close and reopen any terminals. 
+
+## Setting up the Python interpreter
+You can set it up so you can use the scripts from both the terminal and VScode.
 ### VScode
 1. Open VScode in Bigblue
 2. Open the VScode options (Ctrl+Shift+P) and search Python.

@@ -354,7 +354,7 @@ class PatientData:
             if frame not in which_frames:
                 surfaces.append(None)
                 continue
-            surface_mesh = io.read(f'{self.img2model_fldr}/frame{frame}_template.stl')
+            surface_mesh = io.read(f'{self.img2model_fldr}/frame{frame}_template.vtu')
             surfaces.append(surface_mesh)
             self.surface_meshes.append(surface_mesh)
 
@@ -396,7 +396,7 @@ class PatientData:
                 valve_mesh = mu.subdivide_mesh(valve_mesh, mesh_subdivisions)
                 septum_mesh = mu.subdivide_mesh(septum_mesh, mesh_subdivisions)
 
-            io.write(f'{self.img2model_fldr}/frame{frame}_template.stl', surface_mesh)
+            io.write(f'{self.img2model_fldr}/frame{frame}_template.vtu', surface_mesh)
             io.write(f'{self.img2model_fldr}/frame{frame}_bv_surface.stl', bvmesh)
             io.write(f'{self.img2model_fldr}/frame{frame}_valve_surfaces.stl', valve_mesh)
             io.write(f'{self.img2model_fldr}/frame{frame}_septum_surface.stl', septum_mesh)
@@ -614,7 +614,8 @@ class CMRSegData:
                 except:
                     print('Translation file for ' + view + ' not found.')
                     continue
-                print('Loading translation file for ' + view + '...')
+                if 'frame0' in frame_prefix:
+                    print('Loading translation file for ' + view + '...')
 
             if found == 0:
                 # Compute alignment
@@ -1137,7 +1138,7 @@ class FittedTemplate:
 
 
     def make_volumetric_mesh(self):
-        volumetric_ien = np.load('src/bvfitting/template/volume_template_ien.npy')
+        volumetric_ien = np.load(f'{filepath}/template/volume_template_ien.npy')
         bvmesh, _, _ = self.bvmodel.get_bv_surface_mesh()
         mesh = io.Mesh(bvmesh.points, {'tetra': volumetric_ien})
         return mesh

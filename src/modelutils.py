@@ -101,7 +101,7 @@ def fourier_time_smoothing(surfaces):
     smoothed_disp_reshape = smoothed_disp_reshape.reshape(disp.shape)
 
     modified_surfaces = []
-    for i in tqdm(range(2,32)):
+    for i in tqdm(range(2,len(surfaces)+2)):
         surface = surfaces[i-2]
         surface.points = xyzs[2] + smoothed_disp_reshape[i]
         modified_surfaces.append(surface)

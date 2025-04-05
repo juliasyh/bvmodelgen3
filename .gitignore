@@ -3,3 +3,4 @@ test_data/
 *.stl
 *.png
 .vscode/
+__pycache__/

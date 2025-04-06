@@ -39,7 +39,7 @@ alias pybvgen='/home/jilberto/.conda/envs/bvgen3/bin/python'
 pybvgen your_script.py
 ```
 
-### Installation
+# Installation
 1. Create a conda environment and activate it,
 ```
 conda create -n bvgen3 python=3.13.2
@@ -52,6 +52,10 @@ python -m pip install -e .
 4. Install cheart-python-io. Follow the instructions [here](https://gitlab.eecs.umich.edu/jilberto/cheart-python-io) (you will need access to Gitlab).
 
 
+# Inputs
+The inputs of the `main.py` script are the short axis, four chamber, three chamber, and two chamber (SA, LA_4CH, LA_3CH, LA_2CH) cine images and the valve segmentation on the first frame.
+
+For the valve segmentation, select points using label 1 for MV, 2 for TV, 3 for AV. *If there is more than one slice for the 3CH view, only add points in one!*
 
 ### TODO list
 * Smooth valve position?

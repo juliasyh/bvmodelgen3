@@ -135,7 +135,7 @@ def volume_match_correction(surfaces, labels):
         lv_wall_volume_og[i], rv_wall_volume_og[i] = calculate_wall_volumes(xyz, ien, labels)
 
     # Set tolerance to 0.1 mm3
-    if np.max(rv_volume) > 1e4:
+    if np.max(rv_volume_og) > 1e4:
         tol = 1e-1
     else:
         tol = 1e-10

@@ -5,14 +5,14 @@ Scripts to generate a 3D geometry for cardiac MRI
 If you have access to the bigblue server, you do not need to install the scripts, just set up the correct paths and python interpreter. 
 
 ## Setting up the NN paths
-1. Open your '~/.bashrc' file (you can do 'nano ~/.bashrc' if in the terminal or 'code ~/.bashrc' if in VScode).
-2. At the end of the '~/.bashrc' file copy the following (exactly as they are!),
+1. Open your `~/.bashrc` file (you can do `nano ~/.bashrc` if in the terminal or `code ~/.bashrc` if in VScode).
+2. At the end of the `~/.bashrc` file copy the following (exactly as they are!),
    ```
    export nnUNet_raw="/home/jilberto/software/nnUNetv2/nnUNet_raw"
    export nnUNet_preprocessed="/home/jilberto/software/nnUNetv2/nnUNet_preprocessed"
    export nnUNet_results="/home/jilberto/software/nnUNetv2/nnUNet_results"
    ```
-3. Save the '~/.bashrc' file and close and reopen any terminals. 
+3. Save the `~/.bashrc` file and close and reopen any terminals. 
 
 ## Setting up the Python interpreter
 You can set it up so you can use the scripts from both the terminal and VScode.
@@ -21,12 +21,12 @@ You can set it up so you can use the scripts from both the terminal and VScode.
 2. Open the VScode options (Ctrl+Shift+P) and search Python.
 3. Select the one that says Python: Select Interpreter
 4. Click on Enter interpreter path
-5. Copy and paste this path: '/home/jilberto/.conda/envs/bvgen3/bin/python' and press enter.
+5. Copy and paste this path: `/home/jilberto/.conda/envs/bvgen3/bin/python` and press enter.
 6. On the bottom right you should see a text indicating the environment bvgen3 is active.
 7. Make sure to reopen any terminals to make sure the correct environment is loaded. 
 
 ### Terminal
-1. Open your '.bashrc' file with your favorite editor.
+1. Open your `.bashrc` file with your favorite editor.
 ```
 nano ~/.bashrc
 ```
@@ -54,7 +54,4 @@ python -m pip install -e .
 
 
 ### TODO list
-* Smooth valve position
-* Do a spatial smoothing of points
-    * You need to generate a tet template mesh
-* Calculate chamber and ventricle volumes.
+* Smooth valve position?

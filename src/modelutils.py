@@ -134,6 +134,12 @@ def volume_match_correction(surfaces, labels):
         lv_volume_og[i], rv_volume_og[i] = calculate_chamber_volumes(xyz, ien, labels)
         lv_wall_volume_og[i], rv_wall_volume_og[i] = calculate_wall_volumes(xyz, ien, labels)
 
+    # Set tolerance to 0.1 mm3
+    if np.max(rv_volume) > 1e4:
+        tol = 1e-1
+    else:
+        tol = 1e-10
+
 
     # Correct the traces
     lv_volume = lv_volume_og.copy()
@@ -165,7 +171,7 @@ def volume_match_correction(surfaces, labels):
         target_vol = target_rv_volumes[i]
         _, old_rv_vol = calculate_chamber_volumes(model.points, model.cells[0].data, labels)
 
-        if np.abs(old_rv_vol - target_vol) < 1e-5:
+        if np.abs(old_rv_vol - target_vol) < tol:
             continue
 
         # Get normals
@@ -208,7 +214,7 @@ def volume_match_correction(surfaces, labels):
 
         _, old_rv_vol = calculate_wall_volumes(model.points, model.cells[0].data, labels)
 
-        if np.abs(old_rv_vol - target_vol) < 1e-5:
+        if np.abs(old_rv_vol - target_vol) < tol:
             continue
 
         # Get normals

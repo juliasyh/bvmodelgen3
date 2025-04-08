@@ -400,6 +400,10 @@ class GPDataSet(object):
         if case == 'mv':
             av_valve_points = self.points_coordinates[self.contour_type ==
                                                      ContourType.AORTA_VALVE, :]
+            if len(av_valve_points) == 0:
+                mv_av_correction = False
+            else:
+                mv_av_correction = True
 
         if len(valve_points) > n:# if we have enough points to define the
         # contour,
@@ -485,7 +489,7 @@ class GPDataSet(object):
                                              normal_valve)+ P_mean
             
         # If MV, we need to warp the ellipsoid to match the bridge better
-        if case == 'mv':
+        if case == 'mv' and mv_av_correction:
             # Find what MV point is closer to AV
             from scipy.spatial.distance import cdist
             dist = cdist(av_valve_points, valve_points)

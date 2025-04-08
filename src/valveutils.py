@@ -42,7 +42,8 @@ def load_valve_nii(filename, view, frame=0, slice=0, labels = {'mv': 1, 'tv': 2,
         return mv_points
     
     if '3ch' in view:
-        assert len(mv_points) > 0, 'No mitral valve points found'
+        if len(mv_points) == 0:
+            print('WARNING: No mitral valve points found in 3CH')
         assert len(av_points) > 0, 'No aortic valve points found'
         return mv_points, av_points
 

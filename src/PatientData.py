@@ -152,8 +152,13 @@ class PatientData:
             None
         """
         self.valve_paths = valve_paths
-        self.valve_data = CMRValveData(self.cmr_data.segs, self.valve_paths, f'{self.output_fldr}/img2model/', load_from_nii, 
-                                       slices_2ch=slices_2ch, slices_3ch=slices_3ch, slices_4ch=slices_4ch)
+        self.valve_data = CMRValveData(self.cmr_data.segs, self.valve_paths, f'{self.output_fldr}/img2model/')
+        
+        # Load or find valves
+        if load_from_nii:
+            self.valve_data.load_valves_from_nii()
+        else:
+            self.valve_data.find_valves(slices_2ch=slices_2ch, slices_3ch=slices_3ch, slices_4ch=slices_4ch)
         
         # Save valves
         self.valve_data.save_valves()
@@ -874,8 +879,7 @@ class ViewSegData:
 
             
 class CMRValveData:
-    def __init__(self, segs, valve_paths, output_fldr, load_from_nii=False,
-                 slices_2ch=[], slices_3ch=[], slices_4ch=[]):
+    def __init__(self, segs, valve_paths, output_fldr):
         self.segs = segs
         self.valve_paths = valve_paths
         self.output_fldr = output_fldr
@@ -888,13 +892,6 @@ class CMRValveData:
         self.tv_points = {}
         self.tv_centroids = {}
         self.initialize_valve_dicts()
-
-        if load_from_nii:
-            print('Loading valves from NIfTI files...')
-            self.load_valves_from_nii()
-        else:
-            print('Finding valves...')
-            self.find_valves(slices_2ch=slices_2ch, slices_3ch=slices_3ch, slices_4ch=slices_4ch)
 
 
     def initialize_valve_dicts(self):
@@ -923,13 +920,14 @@ class CMRValveData:
 
 
     def find_valves(self, slices_2ch=[], slices_3ch=[], slices_4ch=[]):
+        print('Finding valves...')
         # TODO need to request there is a valve seg for all the slices that we are using
         # TODO make sure TV second point is the septal one
         # Note that MV points are returned such that the second point is the septal one
         # 2CH, automatic, no need to load from nii
-        print('Finding MV valve in 2CH view...')
         view = 'la_2ch'
         if view in self.valve_paths.keys():
+            print('Finding MV valve in 2CH view...')
             seg = self.segs[view]
             nslices = seg.shape[-2]
             if len(slices_2ch) == 0:
@@ -941,9 +939,9 @@ class CMRValveData:
 
 
         # For the 3CH we only use one slice
-        print('Finding AV and MV valve in 3CH view...')
         view = 'la_3ch'
         if view in self.valve_paths.keys():
+            print('Finding AV and MV valve in 3CH view...')
             seg = self.segs[view]
             nslices = seg.shape[-2]
             if len(slices_3ch) == 0:
@@ -960,9 +958,9 @@ class CMRValveData:
                 self.av_centroids[view][slice] = output[3]
 
         # 4CH
-        print('Finding MV and TV valve in 4CH view...')
         view = 'la_4ch'
         if view in self.valve_paths.keys():
+            print('Finding MV and TV valve in 4CH view...')
             seg = self.segs[view]
             nslices = seg.shape[-2]
             if len(slices_4ch) == 0:
@@ -976,7 +974,9 @@ class CMRValveData:
 
 
     def load_valves_from_nii(self):
+        print('Loading valves from NIfTI files...')
         raise NotImplementedError('This function is not implemented yet.')
+    
     
     def visualize_valves(self, imgs, slices_to_plot = {'la_2ch': 0, 'la_3ch': 0, 'la_4ch': 0}):
 

@@ -16,16 +16,16 @@ if __name__ ==  '__main__':
 
     # Options
     nn_segmentation = False     # Use nn to create segmentations, if False, it will load them from the paths defined in segs
-    align_segmentations = True
+    align_segmentations = False
     visualize = False
     smooth_in_time = True
     correct_using_volumes = True
-    load_surfaces = 'smooth'            # Load surfaces. None means not to load. 'initial' means after the initial fitting, 
+    load_surfaces = None            # Load surfaces. None means not to load. 'initial' means after the initial fitting, 
                                     # 'smooth', after smoothing, 'corrected' after volume correction.
     
     # Inputs
-    output_path = 'test_data/'   # where all the output will be saved
-    imgs_path = 'test_data/'     # Dummy variable to define common paths, not truly needed if you define the paths directly
+    output_path = 'work/HCM_pt1/'   # where all the output will be saved
+    imgs_path = 'work/HCM_pt1/'     # Dummy variable to define common paths, not truly needed if you define the paths directly
 
     imgs = {'sa': imgs_path + 'SA',
             'la_2ch': imgs_path + 'LA_2CH',
@@ -33,12 +33,11 @@ if __name__ ==  '__main__':
             'la_4ch': imgs_path + 'LA_4CH'}
 
     # Which frames to process
-    which_frames = None  # None means all frames
+    which_frames = [0]  # None means all frames
 
     # Paths to the valve segmentations    
-    valves_3ch_slice = [1]  # The slice to use for the 3-chamber view. Only use one slice!
+    valves_3ch_slice = [0]  # The slice to use for the 3-chamber view. Only use one slice!
     valves = {'la_2ch': imgs_path + 'LA_2CH_valves', 
-              'la_3ch': imgs_path + 'LA_3CH_valves',    
               'la_4ch': imgs_path + 'LA_4CH_valves'}
 
     # Paths to segmentations. Note that if nn_segmentation is True, these paths are not used.    

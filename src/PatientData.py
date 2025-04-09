@@ -557,8 +557,8 @@ class CMRSegData:
         # Check that all segmentations have the same number of frames
         frames = [seg.shape[-1] for seg in segs.values()]
         if len(set(frames)) > 1:
-            raise ValueError('Segmentations have different number of frames. I don\'t know how to handle this.')
-        
+            frame_info = ', '.join([f'{view}: {seg.shape[-1]}' for view, seg in segs.items()])
+            raise ValueError(f'Segmentations have different number of frames. Frame counts: {frame_info}')
         return frames[0]
     
 

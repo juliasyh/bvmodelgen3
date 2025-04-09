@@ -711,8 +711,25 @@ class CMRSegData:
             io.write(f'{frame_prefix}contours.vtu', self.vertex_contours)
             all_frame_contours.append(contours)
 
+
+        self.contour_sanity_check(all_frame_contours)
+
         return all_frame_contours
     
+    def contour_sanity_check(self, contours):
+        for i in range(len(contours)):
+            frame_ctrs = contours[i]
+            la_contours = []
+            sa_contours = []
+            for ctr in frame_ctrs:
+                if 'la' in ctr.view:
+                    la_contours.append(ctr)
+                else:
+                    sa_contours.append(ctr)
+
+            assert len(sa_contours) > 0, 'No SA contours found in frame ' + str(i)
+            assert len(la_contours) > 0, 'No LA contours found in frame ' + str(i)
+
 
     def extract_contours(self, visualize=True, which_frames=None, align=True):
         # Deal with which_frames
@@ -896,6 +913,7 @@ class CMRValveData:
 
     def initialize_valve_dicts(self):
         for view in self.segs.keys():
+            if 'sa' in view: continue
             nslices = self.segs[view].shape[-2]
 
             self.mv_points[view] = {}
@@ -933,9 +951,14 @@ class CMRValveData:
             if len(slices_2ch) == 0:
                 slices_2ch = range(nslices)
 
-            for slice in range(nslices):
-                if slice not in slices_2ch: continue
+
+            if nslices == 1:
+                slice = 0
                 self.mv_points[view][slice], self.mv_centroids[view][slice] = vu.get_mv_points(seg, slice=slice)
+            else:
+                for slice in range(nslices):
+                    if slice not in slices_2ch: continue
+                    self.mv_points[view][slice], self.mv_centroids[view][slice] = vu.get_mv_points(seg, slice=slice)
 
 
         # For the 3CH we only use one slice
@@ -947,8 +970,8 @@ class CMRValveData:
             if len(slices_3ch) == 0:
                 slices_3ch = range(nslices)
 
-            for slice in range(nslices):
-                if slice not in slices_3ch: continue
+            if nslices == 1:
+                slice = 0
                 mv_seg_points, av_seg_points = vu.load_valve_nii(self.valve_paths[view], view, slice=slice)
                 output = vu.get_3ch_valve_points(seg, slice=slice, mv_seg_points=mv_seg_points, 
                                                 av_seg_points=av_seg_points)
@@ -956,6 +979,17 @@ class CMRValveData:
                 self.mv_centroids[view][slice] = output[1]
                 self.av_points[view][slice] = output[2]
                 self.av_centroids[view][slice] = output[3]
+
+            else:
+                for slice in range(nslices):
+                    if slice not in slices_3ch: continue
+                    mv_seg_points, av_seg_points = vu.load_valve_nii(self.valve_paths[view], view, slice=slice)
+                    output = vu.get_3ch_valve_points(seg, slice=slice, mv_seg_points=mv_seg_points, 
+                                                    av_seg_points=av_seg_points)
+                    self.mv_points[view][slice] = output[0]
+                    self.mv_centroids[view][slice] = output[1]
+                    self.av_points[view][slice] = output[2]
+                    self.av_centroids[view][slice] = output[3]
 
         # 4CH
         view = 'la_4ch'
@@ -967,10 +1001,15 @@ class CMRValveData:
                 slices_4ch = range(nslices)
             mv_seg_points, tv_seg_points = vu.load_valve_nii(self.valve_paths[view], view)
 
-            for slice in range(nslices):
-                if slice not in slices_4ch: continue
+            if nslices == 1:
+                slice = 0
                 self.mv_points[view][slice], self.mv_centroids[view][slice] = vu.get_mv_points(seg, slice=slice)
                 self.tv_points[view][slice], self.tv_centroids[view][slice] = vu.get_tv_points(seg, tv_seg_points=tv_seg_points, slice=slice)
+            else:
+                for slice in range(nslices):
+                    if slice not in slices_4ch: continue
+                    self.mv_points[view][slice], self.mv_centroids[view][slice] = vu.get_mv_points(seg, slice=slice)
+                    self.tv_points[view][slice], self.tv_centroids[view][slice] = vu.get_tv_points(seg, tv_seg_points=tv_seg_points, slice=slice)
 
 
     def load_valves_from_nii(self):

@@ -10,7 +10,7 @@ from matplotlib.widgets import Slider
     
 from niftiutils import readFromNIFTI
 
-def load_valve_nii(filename, view, frame=0, slice=0, labels = {'mv': 1, 'tv': 2, 'av': 3, 'pv': 4}):
+def load_valve_nii(filename, view, frame=0, labels = {'mv': 1, 'tv': 2, 'av': 3, 'pv': 4}):
     """
     Load valve points from a NIFTI file based on the specified view.
     Parameters:
@@ -28,7 +28,7 @@ def load_valve_nii(filename, view, frame=0, slice=0, labels = {'mv': 1, 'tv': 2,
     """
 
     try:
-        valves = readFromNIFTI(filename)[0][..., slice, frame]
+        valves = readFromNIFTI(filename)[0][...,frame]
     except FileNotFoundError:
         print(f'File {filename} not found')
         return

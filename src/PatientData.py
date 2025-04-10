@@ -196,6 +196,7 @@ class PatientData:
             # Add valves to contours
             contours = self.cmr_data.all_frame_contours[frame]
             for view in self.cmr_data.segs.keys():
+                if 'sa' in view: continue
                 nslices = self.cmr_data.segs[view].shape[-2]
                 for slice in range(nslices):
                     ijk_all_frames = self.valve_data.mv_points[view][slice]
@@ -223,6 +224,8 @@ class PatientData:
                         # Add to contour list
                         cont = SegSliceContour(tv_points, 'tv', slice, view)
                         contours.append(cont)
+
+
 
             # # Add apex
             add_apex(contours, self.cmr_data.segs)
@@ -970,26 +973,32 @@ class CMRValveData:
             if len(slices_3ch) == 0:
                 slices_3ch = range(nslices)
 
-            if nslices == 1:
-                slice = 0
-                mv_seg_points, av_seg_points = vu.load_valve_nii(self.valve_paths[view], view, slice=slice)
-                output = vu.get_3ch_valve_points(seg, slice=slice, mv_seg_points=mv_seg_points, 
-                                                av_seg_points=av_seg_points)
+            mv_seg_points, av_seg_points = vu.load_valve_nii(self.valve_paths[view], view)
+
+            for slice in range(nslices):
+                if nslices > 1:
+                    if slice not in slices_3ch: continue
+                mv_seg_points_slice = mv_seg_points[mv_seg_points[:,2]==slice][:,0:2]
+                av_seg_points_slice = av_seg_points[av_seg_points[:,2]==slice][:,0:2]
+
+                # Sanity checks
+                if nslices > 1:
+                    if len(mv_seg_points_slice) == 0:
+                        print('WARNING: No MV points found in 3CH view, slice', slice)
+                        continue
+                    if len(av_seg_points_slice) == 0:
+                        print('WARNING: No AV points found in 3CH view, slice', slice)
+                        continue
+                else:
+                    assert len(mv_seg_points_slice) > 0, 'No MV points found in 3CH view'
+                    assert len(av_seg_points_slice) > 0, 'No AV points found in 3CH view'
+
+                output = vu.get_3ch_valve_points(seg, slice=slice, mv_seg_points=mv_seg_points_slice, 
+                                                av_seg_points=av_seg_points_slice)
                 self.mv_points[view][slice] = output[0]
                 self.mv_centroids[view][slice] = output[1]
                 self.av_points[view][slice] = output[2]
                 self.av_centroids[view][slice] = output[3]
-
-            else:
-                for slice in range(nslices):
-                    if slice not in slices_3ch: continue
-                    mv_seg_points, av_seg_points = vu.load_valve_nii(self.valve_paths[view], view, slice=slice)
-                    output = vu.get_3ch_valve_points(seg, slice=slice, mv_seg_points=mv_seg_points, 
-                                                    av_seg_points=av_seg_points)
-                    self.mv_points[view][slice] = output[0]
-                    self.mv_centroids[view][slice] = output[1]
-                    self.av_points[view][slice] = output[2]
-                    self.av_centroids[view][slice] = output[3]
 
         # 4CH
         view = 'la_4ch'
@@ -1000,16 +1009,29 @@ class CMRValveData:
             if len(slices_4ch) == 0:
                 slices_4ch = range(nslices)
             mv_seg_points, tv_seg_points = vu.load_valve_nii(self.valve_paths[view], view)
+            
 
-            if nslices == 1:
-                slice = 0
-                self.mv_points[view][slice], self.mv_centroids[view][slice] = vu.get_mv_points(seg, slice=slice)
-                self.tv_points[view][slice], self.tv_centroids[view][slice] = vu.get_tv_points(seg, tv_seg_points=tv_seg_points, slice=slice)
-            else:
-                for slice in range(nslices):
+            for slice in range(nslices):
+                if nslices > 1:
                     if slice not in slices_4ch: continue
-                    self.mv_points[view][slice], self.mv_centroids[view][slice] = vu.get_mv_points(seg, slice=slice)
-                    self.tv_points[view][slice], self.tv_centroids[view][slice] = vu.get_tv_points(seg, tv_seg_points=tv_seg_points, slice=slice)
+                
+                mv_seg_points_slice = mv_seg_points[mv_seg_points[:,2]==slice][:,0:2]
+                tv_seg_points_slice = tv_seg_points[tv_seg_points[:,2]==slice][:,0:2]
+
+                # Sanity checks
+                if nslices > 1:
+                    if len(mv_seg_points_slice) == 0:
+                        print('WARNING: No MV points found in 4CH view, slice', slice)
+                        continue
+                    if len(tv_seg_points_slice) == 0:
+                        print('WARNING: No TV points found in 4CH view, slice', slice)
+                        continue
+                else:
+                    assert len(mv_seg_points_slice) > 0, 'No MV points found in 4CH view'
+                    assert len(tv_seg_points_slice) > 0, 'No TV points found in 4CH view'
+
+                self.mv_points[view][slice], self.mv_centroids[view][slice] = vu.get_mv_points(seg, slice=slice)
+                self.tv_points[view][slice], self.tv_centroids[view][slice] = vu.get_tv_points(seg, tv_seg_points=tv_seg_points_slice, slice=slice)
 
 
     def load_valves_from_nii(self):
@@ -1035,6 +1057,7 @@ class CMRValveData:
 
     def save_valves(self):
         for view in self.segs.keys():
+            if 'sa' in view: continue
             np.save(f'{self.output_fldr}/{view}_mv_points.npy', self.mv_points[view])
             np.save(f'{self.output_fldr}/{view}_mv_centroids.npy', self.mv_centroids[view])
             if '3ch' in view:

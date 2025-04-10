@@ -351,23 +351,30 @@ def add_apex(contours, segs, adjust_weights=False):
     sa_contours = []
     la_contours = []
     mv_points = []
+    sa_slices = []
     for ctr in contours:
         if 'lvendo' in ctr.ctype:
             if 'la' in ctr.view:
                 la_contours.append(ctr)
             else:
                 sa_contours.append(ctr)
+                sa_slices.append(ctr.slice)
         elif 'mv' in ctr.ctype:
             mv_points.append(ctr.points)
+    mv_points = np.vstack(mv_points)
+    sa_slices_max = np.max(sa_slices)
+    sa_slices_min = np.min(sa_slices)
+
+    # Sanity check
     if len(la_contours) == 0:
         return
-    mv_points = np.vstack(mv_points)
 
     # Need to find if the slices are ordered from apex to base or base to apex
     mv_centroid = np.mean(mv_points, axis=0)
-    mv_ij = segs['sa'].inverse_transform(mv_centroid)
-    nslices = segs['sa'].data.shape[-1]
-    if mv_ij[2] > nslices/2:
+    mv_ij = segs['sa'].inverse_transform(mv_centroid).astype(int)
+    nslices = segs['sa'].shape[-2]
+
+    if np.abs(mv_ij[2] - sa_slices_max) < np.abs(mv_ij[2] - sa_slices_min): # Apex is closer to the first slice
         apex_slice1 = 0
         apex_slice2 = 1
     else:

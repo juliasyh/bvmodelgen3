@@ -866,10 +866,10 @@ class ViewSegData:
                 lv_n = su.get_number_of_objects(lv)
 
                 if rv_n > 1: 
-                    # print('Warning: More than one RV object in slice', i)
+                    print('Warning: More than one RV object in slice', i, ', frame',frame,' deleting frame data')
                     rv[:] = 0
                 if (lvbp_n > 1) or (lv_n > 1): 
-                    # print('Warning: More than one LV or LVBP object in slice', i)
+                    print('Warning: More than one LV or LVBP object in slice', i, ', frame',frame,' deleting frame data')
                     lvbp[:] = 0
                     lv[:] = 0
                     rv[:] = 0

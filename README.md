@@ -8,9 +8,9 @@ If you have access to the bigblue server, you do not need to install the scripts
 1. Open your `~/.bashrc` file (you can do `nano ~/.bashrc` if in the terminal or `code ~/.bashrc` if in VScode).
 2. At the end of the `~/.bashrc` file copy the following (exactly as they are!),
    ```
-   export nnUNet_raw="/home/jilberto/software/nnUNetv2/nnUNet_raw"
-   export nnUNet_preprocessed="/home/jilberto/software/nnUNetv2/nnUNet_preprocessed"
-   export nnUNet_results="/home/jilberto/software/nnUNetv2/nnUNet_results"
+   export nnUNet_raw="/opt/bvgen/NN/nnUNet_raw"
+   export nnUNet_preprocessed="/opt/bvgen/NN/nnUNet_preprocessed"
+   export nnUNet_results="/opt/bvgen/NN/nnUNet_results"
    ```
 3. Save the `~/.bashrc` file and close and reopen any terminals. 
 

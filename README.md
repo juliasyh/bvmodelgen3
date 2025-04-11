@@ -21,7 +21,7 @@ You can set it up so you can use the scripts from both the terminal and VScode.
 2. Open the VScode options (Ctrl+Shift+P) and search Python.
 3. Select the one that says Python: Select Interpreter
 4. Click on Enter interpreter path
-5. Copy and paste this path: `/home/jilberto/.conda/envs/bvgen3/bin/python` and press enter.
+5. Copy and paste this path: `/opt/bvgen/pybvenv/bin/python` and press enter.
 6. On the bottom right you should see a text indicating the environment bvgen3 is active.
 7. Make sure to reopen any terminals to make sure the correct environment is loaded. 
 
@@ -32,7 +32,7 @@ nano ~/.bashrc
 ```
 2. At the end copy and paste the following,
 ```
-alias pybvgen='/home/jilberto/.conda/envs/bvgen3/bin/python'
+alias pybvgen='/opt/bvgen/pybvenv/bin/python'
 ```
 3. To use any of the scripts or modules of the repository, in a terminal, do,
 ```

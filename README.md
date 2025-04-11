@@ -40,9 +40,15 @@ pybvgen your_script.py
 ```
 
 # Installation
-1. Create a conda environment and activate it,
+1. Create an environment and activate it. If using conda, 
 ```
 conda create -n bvgen3 python=3.13.2
+conda activate bvgen3
+```
+If using .venv,
+```
+python -m venv pybvenv
+source pybvenv
 ```
 2. Install necessary packages and modules,
 ```

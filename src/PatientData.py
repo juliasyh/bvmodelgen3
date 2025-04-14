@@ -305,8 +305,8 @@ class PatientData:
         if len(which_frames) != self.cmr_data.nframes:
             print('Smoothing BV surfaces in time is only available for the whole cycle. \n'
                   'Returning without smoothing.')
-            return
-
+            return surfaces
+ 
         print('Smoothing BV surfaces in time...')
 
         # Smooth the surfaces
@@ -329,7 +329,7 @@ class PatientData:
         if len(which_frames) != self.cmr_data.nframes:
             print('Correcting BV surfaces by volumes is only available for the whole cycle. \n'
                 'Returning without correcting.')
-            return
+            return surfaces
         
         print('Correcting BV surfaces by volumes...')
         labels = self.template.labels
@@ -430,8 +430,8 @@ class PatientData:
         labels = self.template.labels
         for frame in range(self.cmr_data.nframes):
             if frame not in which_frames:
-                lv_volume.append(None)
-                rv_volume.append(None)
+                lv_volume[frame] = None
+                rv_volume[frame] = None
                 continue
             surface_mesh = surfaces[frame]
             xyz = surface_mesh.points
@@ -468,8 +468,8 @@ class PatientData:
         labels = self.template.labels
         for frame in range(self.cmr_data.nframes):
             if frame not in which_frames:
-                lv_wall_volume.append(None)
-                rv_wall_volume.append(None)
+                lv_wall_volume[frame] = None
+                rv_wall_volume[frame] = None
                 continue
             surface_mesh = surfaces[frame]
             xyz = surface_mesh.points
@@ -714,14 +714,20 @@ class CMRSegData:
             io.write(f'{frame_prefix}contours.vtu', self.vertex_contours)
             all_frame_contours.append(contours)
 
-
-        self.contour_sanity_check(all_frame_contours)
-
         return all_frame_contours
     
-    def contour_sanity_check(self, contours):
-        for i in range(len(contours)):
-            frame_ctrs = contours[i]
+    def contour_sanity_check(self, contours, which_frames=None):
+        # Deal with which_frames
+        if which_frames is None:
+            which_frames = range(self.nframes)
+        elif isinstance(which_frames, int):
+            which_frames = [which_frames]
+        else:
+            which_frames = list(which_frames)
+
+        for frame in range(len(contours)):
+            if frame not in which_frames: continue
+            frame_ctrs = contours[frame]
             la_contours = []
             sa_contours = []
             for ctr in frame_ctrs:
@@ -730,8 +736,8 @@ class CMRSegData:
                 else:
                     sa_contours.append(ctr)
 
-            assert len(sa_contours) > 0, 'No SA contours found in frame ' + str(i)
-            assert len(la_contours) > 0, 'No LA contours found in frame ' + str(i)
+            assert len(sa_contours) > 0, 'No SA contours found in frame ' + str(frame)
+            assert len(la_contours) > 0, 'No LA contours found in frame ' + str(frame)
 
 
     def extract_contours(self, visualize=True, which_frames=None, align=True):
@@ -756,6 +762,8 @@ class CMRSegData:
         self.all_frame_contours = self.generate_contours(self.all_frame_slices, visualize=visualize, 
                                                          which_frames=which_frames)
         
+        self.contour_sanity_check(self.all_frame_contours, which_frames)
+
     
     def apply_affine_to_pixcoords(self, ijk, view, translation_frame=0):
         # load respective translations and apply it to ijk
@@ -855,7 +863,7 @@ class ViewSegData:
                     lv = su.remove_holes_islands(lv)
 
                 if np.min(lv) < 0:
-                    # print(f'Warning: The LV in {view} in slice {i} is not closed')
+                    print(f'WARNING: The LV in {view} in slice {i} is not closed, deleting slice data')
                     lv[:] = 0
                     lvbp[:] = 0
                     rv[:] = 0
@@ -866,10 +874,10 @@ class ViewSegData:
                 lv_n = su.get_number_of_objects(lv)
 
                 if rv_n > 1: 
-                    print('Warning: More than one RV object in slice', i, ', frame',frame,' deleting frame data')
+                    print(f'WARNING: More than one RV object in slice {i} frame {frame}, deleting slice data')
                     rv[:] = 0
                 if (lvbp_n > 1) or (lv_n > 1): 
-                    print('Warning: More than one LV or LVBP object in slice', i, ', frame',frame,' deleting frame data')
+                    print(f'WARNING: More than one LV or LVBP object in slice {i} frame {frame}, deleting slice data')
                     lvbp[:] = 0
                     lv[:] = 0
                     rv[:] = 0

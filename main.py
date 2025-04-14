@@ -15,17 +15,19 @@ if __name__ ==  '__main__':
     ##############################################################
 
     # Options
-    nn_segmentation = False     # Use nn to create segmentations, if False, it will load them from the paths defined in segs
-    align_segmentations = False
+    interpolate_segmentations = 'max'  # ('max', 'min', int, None) means to interpolate the segmentations to the max or min number of frames, 
+                                       # or to a specific number of frames. None means not to interpolate.
+    nn_segmentation = True             # Use nn to create segmentations, if False, it will load them from the paths defined in segs
+    align_segmentations = True
     visualize = False
     smooth_in_time = True
     correct_using_volumes = True
-    load_surfaces = None            # Load surfaces. None means not to load. 'initial' means after the initial fitting, 
-                                    # 'smooth', after smoothing, 'corrected' after volume correction.
+    load_surfaces = None                # Load surfaces. None means not to load. 'initial' means after the initial fitting, 
+                                        # 'smooth', after smoothing, 'corrected' after volume correction.
     
     # Inputs
-    output_path = 'work/HCM_pt1/'   # where all the output will be saved
-    imgs_path = 'work/HCM_pt1/'     # Dummy variable to define common paths, not truly needed if you define the paths directly
+    output_path = 'test_data/Images/'   # where all the output will be saved
+    imgs_path = 'test_data/Images/'    # Dummy variable to define common paths, not truly needed if you define the paths directly
 
     imgs = {'sa': imgs_path + 'SA',
             'la_2ch': imgs_path + 'LA_2CH',
@@ -33,7 +35,7 @@ if __name__ ==  '__main__':
             'la_4ch': imgs_path + 'LA_4CH'}
 
     # Which frames to process
-    which_frames = [0]  # None means all frames
+    which_frames = None  # None means all frames. Remember Python starts with 0!
 
     # Paths to the valve segmentations    
     valves_3ch_slice = [0]  # The slice to use for the 3-chamber view. Only use one slice!
@@ -46,6 +48,20 @@ if __name__ ==  '__main__':
             'la_3ch': imgs_path + 'la_3ch_seg',
             'la_4ch': imgs_path + 'la_4ch_seg'}
     
+
+    ##############################################################
+    ######  IMAGE INTERPOLATION #################################
+    ##############################################################
+
+    if (interpolate_segmentations == 'max' 
+        or interpolate_segmentations == 'min' 
+        or isinstance(interpolate_segmentations, int)):
+        from imgutils import interpolate_scans
+        interp_views = interpolate_scans(imgs, interpolate_segmentations)
+        # Update the images with the interpolated ones
+        for view in interp_views:
+            imgs[view] = imgs[view] + '_interp'     
+
 
     ##############################################################
     ######  TEMPLATE FITTING AND SURFACE GENERATION ##############
@@ -70,7 +86,7 @@ if __name__ ==  '__main__':
         pdata.save_bv_surfaces(surfaces, mesh_subdivisions=0, which_frames=which_frames)
 
         if smooth_in_time:
-            surfaces = pdata.smooth_surfaces_in_time(surfaces)
+            surfaces = pdata.smooth_surfaces_in_time(surfaces, which_frames=which_frames)
             pdata.save_bv_surfaces(surfaces, mesh_subdivisions=0, which_frames=which_frames)
             if correct_using_volumes:
                 surfaces = pdata.correct_surfaces_by_volumes(surfaces, which_frames=which_frames)
@@ -94,6 +110,10 @@ if __name__ ==  '__main__':
     elif load_surfaces == 'corrected':
         surfaces = pdata.load_surfaces(which_frames=which_frames)
 
-    # Calculate volumes
+
+    ##############################################################
+    ######  VOLUME CALCULATION  ##################################
+    ##############################################################
+
     lv_volume, rv_volume = pdata.calculate_chamber_volumes(surfaces, which_frames=which_frames)
     lv_wall_volume, rv_wall_volume = pdata.calculate_wall_volumes(surfaces, which_frames=which_frames)

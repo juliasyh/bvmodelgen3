@@ -181,7 +181,7 @@ def getLAinsert(inserts, lv_endo_points, lv_epi_points):
     # First we find a point in the base by looking at the points with the shortest distance between lv_endo and lv_epi
     tree = KDTree(lv_endo_points)
     dist, _ = tree.query(lv_epi_points)
-    base_point = lv_endo_points[np.argmin(dist)]
+    base_point = lv_epi_points[np.argmin(dist)]
 
     # Now we find the point of the rv_insert that's farthest from the base
     dist = cdist(inserts, [base_point])

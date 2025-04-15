@@ -372,7 +372,6 @@ def add_apex(contours, segs, adjust_weights=False):
     # Need to find if the slices are ordered from apex to base or base to apex
     mv_centroid = np.mean(mv_points, axis=0)
     mv_ij = segs['sa'].inverse_transform(mv_centroid).astype(int)
-    nslices = segs['sa'].shape[-2]
 
     if np.abs(mv_ij[2] - sa_slices_max) < np.abs(mv_ij[2] - sa_slices_min): # Apex is closer to the first slice
         apex_slice1 = 0
@@ -438,7 +437,7 @@ def add_apex(contours, segs, adjust_weights=False):
     contours += [ctr]
 
 
-def add_rv_apex(contours, cmrs):
+def add_rv_apex(contours, segs):
     # Split la and sa contours
     safw_contours = []
     lafw_contours = []
@@ -463,7 +462,7 @@ def add_rv_apex(contours, cmrs):
                 lv_epi_contours.append(ctr)
             else:
                 lv_epi_contours.append(ctr)
-        elif 'mv' in ctr.ctype:
+        elif 'tv' in ctr.ctype:
             tv_points.append(ctr.points)
         elif 'apexendo' in ctr.ctype:
             lv_apex.append(ctr.points)
@@ -474,32 +473,50 @@ def add_rv_apex(contours, cmrs):
 
     # Merge FW and SEP contours
     rv_contours = []
-    for i in range(len(safw_contours)):
-        if i > len(sasep_contours)-1:
-            rv_contours.append(safw_contours[i])
-        else:
-            lim_point1 = sasep_contours[i].points[0]
-            dist1 = np.linalg.norm(lim_point1-safw_contours[i].points, axis=1)
-            insert1 = np.argmin(dist1)
-            lim_point2 = sasep_contours[i].points[-1]
-            dist2 = np.linalg.norm(lim_point2-safw_contours[i].points, axis=1)
-            insert2 = np.argmin(dist2)
-            if insert1 > insert2:
-                inserts = insert2, insert1
-                sep_points = sasep_contours[i].points[::-1]
-            else:
-                inserts = insert1, insert2
-                sep_points = sasep_contours[i].points
 
-            fw_points = np.vstack([safw_contours[i].points[inserts[1]:], safw_contours[i].points[0:inserts[0]+1]])
-            points = np.vstack([sep_points, fw_points])
-            rv_contours.append(SegSliceContour(points, 'rvendo', safw_contours[i].slice, safw_contours[i].view, safw_contours[i].normal))
+    # Get slice range
+    fw_min = safw_contours[0].slice
+    fw_max = safw_contours[-1].slice
+    sep_min = sasep_contours[0].slice
+    sep_max = sasep_contours[-1].slice
+    min_slice = min(fw_min, sep_min)
+    max_slice = max(fw_max, sep_max)
+    for i in range(min_slice, max_slice+1):
+        # Check if the slice is in the FW or SEP contours
+        if (i < fw_min) or (i > fw_max): continue # This should never happen
+        if (i < sep_min) or (i > sep_max):  
+            rv_contours.append(safw_contours[i-fw_min])
+            continue
+
+        # Grab the corresponding contours
+        sep_contours = sasep_contours[i-sep_min]
+        fw_contours = safw_contours[i-fw_min]
+        assert sep_contours.slice == fw_contours.slice, "Slice numbers do not match"
+
+        lim_point1 = sep_contours.points[0]
+        dist1 = np.linalg.norm(lim_point1-fw_contours.points, axis=1)
+        insert1 = np.argmin(dist1)
+        lim_point2 = sep_contours.points[-1]
+        dist2 = np.linalg.norm(lim_point2-fw_contours.points, axis=1)
+        insert2 = np.argmin(dist2)
+        if insert1 > insert2:
+            inserts = insert2, insert1
+            sep_points = sep_contours.points[::-1]
+        else:
+            inserts = insert1, insert2
+            sep_points = sep_contours.points
+
+        if np.diff(inserts) == 1: # Consecutive points
+            fw_points = np.vstack([fw_contours.points[inserts[1]:], fw_contours.points[0:inserts[0]+1]]) 
+        else:
+            fw_points = fw_contours.points
+        points = np.vstack([sep_points, fw_points])
+        rv_contours.append(SegSliceContour(points, 'rvendo', fw_contours.slice, fw_contours.view, fw_contours.normal))
 
     # Need to find if the slices are ordered from apex to base or base to apex
     tv_centroid = np.mean(tv_points, axis=0)
-    tv_ij = cmrs['sa'].inverse_transform(tv_centroid)
-    nslices = cmrs['sa'].data.shape[-1]
-    if tv_ij[2] > nslices/2:
+    tv_ij = segs['sa'].inverse_transform(tv_centroid).astype(int)
+    if np.abs(tv_ij[2] - max_slice) < np.abs(tv_ij[2] - min_slice): # Apex is closer to the first slice
         apex_slice0 = 0
         apex_slice1 = 1
         apex_slice2 = 2
@@ -507,7 +524,6 @@ def add_rv_apex(contours, cmrs):
         apex_slice0 = -1
         apex_slice1 = -2
         apex_slice2 = -3
-
 
     # Last SA contour is always the most apical one
     sa0_centroid = np.mean(rv_contours[apex_slice0].points, axis=0)
@@ -525,7 +541,6 @@ def add_rv_apex(contours, cmrs):
         la_vector = -la_vector
     sa1_z = np.dot(sa1_centroid-lv_apex, la_vector)
     sa2_z = np.dot(sa2_centroid-lv_apex, la_vector)
-
 
     # Extrapolate to find when the area becomes 0
     rv_apex_z = sa1_z + (0 - sa1_area)/(sa2_area - sa1_area)*(sa2_z - sa1_z)

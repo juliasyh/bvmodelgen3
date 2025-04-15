@@ -226,7 +226,6 @@ class PatientData:
                         contours.append(cont)
 
 
-
             # # Add apex
             add_apex(contours, self.cmr_data.segs)
             add_rv_apex(contours, self.cmr_data.segs)
@@ -902,6 +901,32 @@ class ViewSegData:
 
                 new_data[:,:,i,frame] = lv*labels['lv'] + rv*labels['rv'] + lvbp*labels['lvbp']
                 
+
+            # Secondary check for SA. The SA slices with data should be contigous (no gaps)
+            if 'sa' in view:
+                sum_data = np.sum(new_data[:,:,:,frame], axis=(0,1))
+                nonzero = np.where(sum_data != 0)[0]
+                diff = np.diff(nonzero)
+                lims = np.where(diff > 1)[0]
+                if len(lims) > 0: # There are non-contiguous slices
+                    nsets = len(lims) + 1
+                    lims = np.concatenate(([0], lims+1, [len(nonzero)]))
+
+                    # Grab the longest one
+                    lengths = []
+                    for i in range(nsets):
+                        lengths.append(lims[i+1] - lims[i])
+
+                    idx = np.argmax(lengths)
+                    start = lims[idx]
+                    end = lims[idx+1]
+
+                    # Set all the other slices to 0
+                    nonzero = nonzero[start:end]
+                
+                for i in range(new_data.shape[2]):
+                    if i not in nonzero:
+                        new_data[:,:,i,frame] = 0
 
         return new_data
 

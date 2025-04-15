@@ -183,12 +183,13 @@ def interpolate_scans(img_paths, nframes):
     imgs = {}
     imgs_sdur = {}
     img_frames = []
-    print(img_paths)
     for view, img_path in img_paths.items():
         img, _, _, header = readFromNIFTI(img_path, return_header=True)
         imgs[view] = img
         imgs_sdur[view] = header['slice_duration']
         img_frames.append(img.shape[3])
+
+    print(", ".join([f"View: {view}, Number of frames: {img.shape[3]}" for view, img in imgs.items()]))
 
     # Check nframes options
     if nframes == 'max':

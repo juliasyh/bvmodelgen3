@@ -4,6 +4,6 @@ test_data_og/
 *.stl
 *.png
 .vscode/
-__pycache__/
+**/__pycache__/
 work/
 *.egg-info/

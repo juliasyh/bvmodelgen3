@@ -54,6 +54,38 @@ def load_valve_nii(filename, view, frame=0, labels = {'mv': 1, 'tv': 2, 'av': 3,
     
 
 def get_mv_points(seg, slice):
+    """
+    Extracts the mitral valve (MV) edge points and centroids for each frame in a given segmentation.
+    Parameters:
+    -----------
+    seg : object
+        A segmentation object containing the following attributes:
+        - `data` : ndarray
+            4D array representing the segmentation data with dimensions 
+            (height, width, slices, frames).
+        - `labels` : dict
+            Dictionary mapping anatomical labels to their corresponding integer values 
+            (e.g., {'lv': 1, 'lvbp': 2, 'rv': 3}).
+        - `view` : str
+            The view type of the segmentation (e.g., 'la_3ch', 'la_4ch').
+    slice : int
+        The index of the slice to process.
+    Returns:
+    --------
+    mv_points : ndarray
+        A 3D array of shape (nframes, 2, 2) containing the coordinates of the two MV edge points 
+        for each frame. The two points represent the edges of the mitral valve.
+    mv_centroids : ndarray
+        A 2D array of shape (nframes, 2) containing the centroid coordinates of the MV for each frame.
+    Notes:
+    ------
+    - The function identifies the mitral valve edges by finding the intersection of the blood pool 
+      and myocardium border in the segmentation data.
+    - For specific views ('la_3ch', 'la_4ch'), the function ensures the lateral point is correctly 
+      identified relative to the right ventricle (RV) centroid.
+    - For other views, the function ensures temporal consistency by checking if the edge points 
+      are flipped between consecutive frames.
+    """
     # Get shape
     nframes = seg.data.shape[-1]
 
@@ -93,7 +125,16 @@ def get_mv_points(seg, slice):
             else:
                 mv_points[frame] = np.vstack([mv_edge1, mv_edge2])
         else:
-            mv_points[frame] = np.vstack([mv_edge1, mv_edge2])
+            if frame == 0:
+                mv_points[frame] = np.vstack([mv_edge1, mv_edge2])
+            else:
+                # Check if points were flipped
+                edge1_dist = np.linalg.norm(mv_edge1 - mv_points[frame-1], axis=1)
+                edge1_ind = np.argmin(edge1_dist)
+                if edge1_ind == 1:
+                    mv_points[frame] = np.vstack([mv_edge2, mv_edge1])
+                else:
+                    mv_points[frame] = np.vstack([mv_edge1, mv_edge2])
         mv_centroids[frame] = np.mean(mv_points[frame], axis=0)
 
     return mv_points, mv_centroids
@@ -169,6 +210,19 @@ def get_tv_points(seg, tv_seg_points, slice):
     tv_centroids = np.mean(tv_points, axis=1)
     
     return tv_points, tv_centroids
+
+
+def get_2ch_valve_points(seg, mv_seg_points, slice):
+    # Find points using the segmentation
+    inter_points, _ = get_mv_points(seg, slice=slice)
+
+    # Calculate displacement given by NN segmentation
+    mv_disp = inter_points - inter_points[0]
+    
+    mv_points = mv_seg_points + mv_disp
+    mv_centroids = np.mean(mv_points, axis=1)
+
+    return mv_points, mv_centroids
 
 
 def get_3ch_valve_points(seg, mv_seg_points, av_seg_points, slice):
@@ -250,6 +304,41 @@ def get_3ch_valve_points(seg, mv_seg_points, av_seg_points, slice):
     return mv_points, mv_centroids, av_points, av_centroids
 
 
+def get_4ch_valve_points(seg, mv_seg_points, tv_seg_points, slice):
+    # Check if the mv_seg_points have the lateral point first
+    tv_cent = np.mean(tv_seg_points, axis=0)
+    mv_dist = np.linalg.norm(mv_seg_points - tv_cent, axis=1)
+    if mv_dist[0] < mv_dist[1]:
+        mv_flip = True
+    else:
+        mv_flip = False
+
+    # Check if the tv_seg_points have the lateral point first
+    mv_cent = np.mean(mv_seg_points, axis=0)
+    tv_dist = np.linalg.norm(tv_seg_points - mv_cent, axis=1)
+    if tv_dist[0] < tv_dist[1]:
+        tv_flip = True
+    else:
+        tv_flip = False
+
+    mv_inter_points, _ = get_mv_points(seg, slice)
+    if mv_flip:
+        mv_inter_points = mv_inter_points[:, ::-1]
+    tv_inter_points, _ = get_tv_points(seg, tv_seg_points, slice)
+    if tv_flip:
+        tv_inter_points = tv_inter_points[:, ::-1]
+
+    # Calculate displacement given by NN segmentation
+    mv_disp = mv_inter_points - mv_inter_points[0]
+    mv_points = mv_seg_points + mv_disp
+    mv_centroids = np.mean(mv_points, axis=1)
+
+    tv_disp = tv_inter_points - tv_inter_points[0]
+    tv_points = tv_seg_points + tv_disp
+    tv_centroids = np.mean(tv_points, axis=1)
+    return mv_points, mv_centroids, tv_points, tv_centroids
+
+
 def plot_valve_movement(img, seg, slice=0, valve_points={}, valve_centroids={}):
     fig, ax = plt.subplots()
     plt.subplots_adjust(bottom=0.25)
@@ -263,12 +352,14 @@ def plot_valve_movement(img, seg, slice=0, valve_points={}, valve_centroids={}):
     color = ['mo', 'co']
     point_displays = {}
     for key, item in valve_points.items():
-        for i in range(item[slice].shape[1]):
-            point_displays[key] = ax.plot(item[slice][frame, i, 1], item[slice][frame, i, 0], color[i], label=key)[0]
+        point_displays[key] = []
+        for i in range(item.shape[1]):
+            aux = ax.plot(item[frame, i, 1], item[frame, i, 0], color[i], label=key)[0]
+            point_displays[key].append(aux)
 
     centroid_displays = {}
     for key, item in valve_centroids.items():
-        centroid_displays[key] = ax.plot(item[slice][frame, 1], item[slice][frame, 0], 'ro', label=key)[0]
+        centroid_displays[key] = ax.plot(item[frame, 1], item[frame, 0], 'ro', label=key)[0]
     
     # Slider axis
     ax_slider = plt.axes([0.25, 0.1, 0.65, 0.03])
@@ -281,11 +372,11 @@ def plot_valve_movement(img, seg, slice=0, valve_points={}, valve_centroids={}):
             seg_display.set_data(np.ma.masked_where(seg.data[..., slice, frame] == 0, seg.data[..., slice, frame]))
 
             for key, item in valve_points.items():
-                for i in range(item[slice].shape[1]):
-                    point_displays[key] = ax.plot(item[slice][frame, i, 1], item[slice][frame, i, 0], color[i], label=key)[0]
+                for i in range(item.shape[1]):
+                    point_displays[key][i].set_data([item[frame, i, 1]], [item[frame, i, 0]])
 
             for key, item in valve_centroids.items():
-                centroid_displays[key].set_data([item[slice][frame, 1]], [item[slice][frame, 0]])
+                centroid_displays[key].set_data([item[frame, 1]], [item[frame, 0]])
                 
             fig.canvas.draw_idle()
 

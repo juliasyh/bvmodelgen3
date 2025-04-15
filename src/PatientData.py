@@ -987,14 +987,13 @@ class CMRValveData:
             if len(slices_2ch) == 0:
                 slices_2ch = range(nslices)
 
+            mv_seg_points = vu.load_valve_nii(self.valve_paths[view], view)
 
-            if nslices == 1:
-                slice = 0
-                self.mv_points[view][slice], self.mv_centroids[view][slice] = vu.get_mv_points(seg, slice=slice)
-            else:
-                for slice in range(nslices):
+            for slice in range(nslices):
+                if nslices > 1:
                     if slice not in slices_2ch: continue
-                    self.mv_points[view][slice], self.mv_centroids[view][slice] = vu.get_mv_points(seg, slice=slice)
+                mv_seg_points_slice = mv_seg_points[mv_seg_points[:,2]==slice][:,0:2]
+                self.mv_points[view][slice], self.mv_centroids[view][slice] = vu.get_2ch_valve_points(seg, mv_seg_points_slice, slice=slice) 
 
 
         # For the 3CH we only use one slice
@@ -1027,7 +1026,7 @@ class CMRValveData:
                     assert len(av_seg_points_slice) > 0, 'No AV points found in 3CH view'
 
                 output = vu.get_3ch_valve_points(seg, slice=slice, mv_seg_points=mv_seg_points_slice, 
-                                                av_seg_points=av_seg_points_slice)
+                                                                   av_seg_points=av_seg_points_slice)
                 self.mv_points[view][slice] = output[0]
                 self.mv_centroids[view][slice] = output[1]
                 self.av_points[view][slice] = output[2]
@@ -1063,8 +1062,11 @@ class CMRValveData:
                     assert len(mv_seg_points_slice) > 0, 'No MV points found in 4CH view'
                     assert len(tv_seg_points_slice) > 0, 'No TV points found in 4CH view'
 
-                self.mv_points[view][slice], self.mv_centroids[view][slice] = vu.get_mv_points(seg, slice=slice)
-                self.tv_points[view][slice], self.tv_centroids[view][slice] = vu.get_tv_points(seg, tv_seg_points=tv_seg_points_slice, slice=slice)
+                output = vu.get_4ch_valve_points(seg, mv_seg_points_slice, tv_seg_points_slice, slice)
+                self.mv_points[view][slice] = output[0] 
+                self.mv_centroids[view][slice] = output[1]
+                self.tv_points[view][slice] = output[2] 
+                self.tv_centroids[view][slice] = output[3]
 
 
     def load_valves_from_nii(self):

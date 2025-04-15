@@ -306,8 +306,15 @@ class BiventricularModel():
         labels=np.unique(self.surfs)
         start_end = []
         for i in labels:
-            ind = np.where(self.surfs==i)[0]
-            start_end.append([ind[0], ind[-1]])
+            if i == 3:
+                ind1 = np.where(self.surfs==i)[0]   # Epi is divided in 2
+                ind2 = np.where((self.surfs==8)+(self.surfs==10)+(self.surfs==11)+(self.surfs==12)+(self.surfs==813))[0]
+                ind = np.union1d(ind1, ind2)
+                start_end.append([ind[0], ind[-1]])
+            elif i == 8: continue
+            else:
+                ind = np.where(self.surfs==i)[0]
+                start_end.append([ind[0], ind[-1]])
         self.surface_start_end = np.array(start_end)
 
 

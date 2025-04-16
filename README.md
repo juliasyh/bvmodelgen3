@@ -66,4 +66,7 @@ For the valve segmentation, select points using label 1 for MV, 2 for TV, 3 for 
 ### TODO list (in order of urgency)
 * Make parallelizable process parallel
 * Add sanity checks for valve movement and contour deformation
-* Smooth valve position?
+* Smooth valve position
+* Output valve detection as nifti
+* Code routine to load valves back
+* Modify code so you can restart from the contours without needing to load segmentations

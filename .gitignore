@@ -6,4 +6,4 @@ test_data_og/
 .vscode/
 **/__pycache__/
 work/
-*.egg-info/
+**/*.egg-info/

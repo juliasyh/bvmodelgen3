@@ -12,7 +12,7 @@ import SimpleITK as sitk
 from niftiutils import readFromNIFTI, saveInterpNIFTI
 from tqdm import tqdm
 from matplotlib.widgets import Slider
-from imgutils import interpolate_scans
+from imgutils import interpolate_img
 
 img, affine, pixdim, header = readFromNIFTI('../test_data/Images/SA', return_header=True)
 
@@ -22,7 +22,7 @@ nframes = 45
 timepoints_og = np.linspace(0, 1, nframes_og)
 timepoints = np.linspace(0, 1, nframes)
 
-interp_img = interpolate_scans(img, nframes)
+interp_img = interpolate_img(img, nframes)
 
 # Fix slice duration
 tcycle = header['slice_duration']*nframes_og

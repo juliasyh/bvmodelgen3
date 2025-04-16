@@ -876,10 +876,13 @@ class ViewSegData:
                     print(f'WARNING: More than one RV object in slice {i} frame {frame}, deleting slice data')
                     rv[:] = 0
                 if (lvbp_n > 1) or (lv_n > 1): 
-                    print(f'WARNING: More than one LV or LVBP object in slice {i} frame {frame}, deleting slice data')
-                    lvbp[:] = 0
-                    lv[:] = 0
-                    rv[:] = 0
+                    if 'la' in view:
+                        raise ValueError(f'ERROR: More than one LV or LVBP object in slice {i} frame {frame}')
+                    else:
+                        print(f'WARNING: More than one LV or LVBP object in slice {i} frame {frame}, deleting slice data')
+                        lvbp[:] = 0
+                        lv[:] = 0
+                        rv[:] = 0
                     
                 if not np.all(lv == 0) and (view == 'sa'):
                     # Check that the LV is somewhat round

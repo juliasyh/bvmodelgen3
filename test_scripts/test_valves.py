@@ -34,35 +34,35 @@ segs = pdata.cmr_data.segs
 imgs = pdata.cmr_data.imgs
 
 # # 2CH
-# view = 'la_2ch'
-# seg = segs[view]
-# img = imgs[view]
+view = 'la_2ch'
+seg = segs[view]
+img = imgs[view]
 
-# mv_seg_points = vu.load_valve_nii(f'{path}/LA_2CH_valves', view)
+mv_seg_points = vu.load_valve_nii(f'{path}/LA_2CH_valves', view)
 
-# slice = 0
-# mv_seg_points_slice = mv_seg_points[mv_seg_points[:,2]==slice][:,0:2]
+slice = 0
+mv_seg_points_slice = mv_seg_points[mv_seg_points[:,2]==slice][:,0:2]
 
-# mv_points, mv_centroids = vu.get_2ch_valve_points(seg, mv_seg_points_slice, slice=slice) 
-# vu.plot_valve_movement(img, seg, slice=0, valve_points={'mv': mv_points}, valve_centroids={'mv': mv_centroids})
+mv_points, mv_centroids = vu.get_2ch_valve_points(seg, mv_seg_points_slice, slice=slice) 
+vu.plot_valve_movement(img, seg, slice=0, valve_points={'mv': mv_points}, valve_centroids={'mv': mv_centroids})
 
 # For the 3CH we only use one slice
-# view = 'la_3ch'
-# seg = segs[view]
-# img = imgs[view]
+view = 'la_3ch'
+seg = segs[view]
+img = imgs[view]
 
-# mv_seg_points, av_seg_points = vu.load_valve_nii(f'{path}/LA_3CH_valves', view)
+mv_seg_points, av_seg_points = vu.load_valve_nii(f'{path}/LA_3CH_valves', view)
 
-# slice = 1
-# mv_seg_points_slice = mv_seg_points[mv_seg_points[:,2]==slice][:,0:2]
-# av_seg_points_slice = av_seg_points[av_seg_points[:,2]==slice][:,0:2]
+slice = 1
+mv_seg_points_slice = mv_seg_points[mv_seg_points[:,2]==slice][:,0:2]
+av_seg_points_slice = av_seg_points[av_seg_points[:,2]==slice][:,0:2]
 
-# mv_points, mv_centroids, av_points, av_centroids = vu.get_3ch_valve_points(seg, slice=slice, 
-#                                                                            mv_seg_points=mv_seg_points_slice, 
-#                                                                            av_seg_points=av_seg_points_slice)
+mv_points, mv_centroids, av_points, av_centroids = vu.get_3ch_valve_points(seg, slice=slice, 
+                                                                           mv_seg_points=mv_seg_points_slice, 
+                                                                           av_seg_points=av_seg_points_slice)
 
-# vu.plot_valve_movement(img, seg, slice=1, valve_points={'av': av_points, 'mv': mv_points},
-#                        valve_centroids={'av': av_centroids, 'mv': mv_centroids})
+vu.plot_valve_movement(img, seg, slice=1, valve_points={'av': av_points, 'mv': mv_points},
+                       valve_centroids={'av': av_centroids, 'mv': mv_centroids})
 
 
 # 4CH

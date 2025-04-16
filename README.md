@@ -64,8 +64,6 @@ The inputs of the `main.py` script are the short axis, four chamber, three chamb
 For the valve segmentation, select points using label 1 for MV, 2 for TV, 3 for AV. *If there is more than one slice for the 3CH view, only add points in one!*
 
 ### TODO list (in order of urgency)
-* Fix plotting function
-* Create function to interpolate frames
-* Make valve extrapolation always use user inputs
 * Make parallelizable process parallel
+* Add sanity checks for valve movement and contour deformation
 * Smooth valve position?

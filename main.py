@@ -18,11 +18,12 @@ if __name__ ==  '__main__':
     # Options
     interpolate_segmentations = 'max'  # ('max', 'min', int, None) means to interpolate the segmentations to the max or min number of frames, 
                                        # or to a specific number of frames. None means not to interpolate.
-    nn_segmentation = False             # Use nn to create segmentations, if False, it will load them from the paths defined in segs
+    nn_segmentation = True             # Use nn to create segmentations, if False, it will load them from the paths defined in segs
     align_segmentations = True
     visualize = False
     smooth_in_time = True
     correct_using_volumes = True
+    load_contours = True
     load_surfaces = None                # Load surfaces. None means not to load. 'initial' means after the initial fitting, 
                                         # 'smooth', after smoothing, 'corrected' after volume correction.
     
@@ -30,16 +31,16 @@ if __name__ ==  '__main__':
     output_path = 'test_data/Images/'   # where all the output will be saved
     imgs_path = 'test_data/Images/'    # Dummy variable to define common paths, not truly needed if you define the paths directly
 
-    imgs = {'sa': imgs_path + 'SA_interp',
+    imgs = {'sa': imgs_path + 'SA',
             'la_2ch': imgs_path + 'LA_2CH',
-            'la_3ch': imgs_path + 'LA_3CH_interp',
+            'la_3ch': imgs_path + 'LA_3CH',
             'la_4ch': imgs_path + 'LA_4CH'}
 
     # Which frames to process
     which_frames = [0]  # None means all frames. Remember Python starts with 0!
 
     # Paths to the valve segmentations    
-    valves_3ch_slice = [0]  # The slice to use for the 3-chamber view. Only use one slice!
+    valves_3ch_slice = []  # The slice to use for the 3-chamber view. Only use one slice!
     valves = {'la_2ch': imgs_path + 'LA_2CH_valves',
               'la_3ch': imgs_path + 'LA_3CH_valves',
               'la_4ch': imgs_path + 'LA_4CH_valves'}
@@ -90,7 +91,7 @@ if __name__ ==  '__main__':
         contours_time = time()
         pdata.cmr_data.extract_contours(visualize=visualize, align=align_segmentations, which_frames=which_frames)
         pdata.find_valves(valves, slices_3ch=valves_3ch_slice, visualize=visualize)
-        pdata.generate_contours(which_frames=which_frames, visualize=visualize)
+        pdata.generate_contours(which_frames=which_frames, visualize=visualize, sa_min_weight=0.5)
         contours_time = time() - contours_time
 
         fit_time = time()

@@ -555,3 +555,58 @@ def add_rv_apex(contours, segs):
     contours += [ctr]
 
 
+
+def modify_sa_weights(contours, min_weight=0.5):
+    # Find sa contours
+    lv_contours = []
+    rv_contours = []
+    lv_apex = []
+    rv_apex = []
+    mv_points = []
+    tv_points = []
+    for ctr in contours:
+        if 'sa' in ctr.view:
+            if ('lvendo' in ctr.ctype) or  ('lvepi' in ctr.ctype):
+                lv_contours.append(ctr)
+            elif ('rvendo' in ctr.ctype) or  ('rvepi' in ctr.ctype):
+                rv_contours.append(ctr)
+        elif 'apexepi' in ctr.ctype:
+            lv_apex.append(ctr.points)
+        elif 'rvapex' in ctr.ctype:
+            rv_apex.append(ctr.points)
+        elif 'mv' in ctr.ctype:
+            mv_points.append(ctr.points)
+        elif 'tv' in ctr.ctype:
+            tv_points.append(ctr.points)
+        
+    mv_centroid = np.mean(np.vstack(mv_points), axis=0)
+    tv_centroid = np.mean(np.vstack(tv_points), axis=0)
+
+    modify_weights_by_la(lv_contours, lv_apex, mv_centroid, min_weight)
+    modify_weights_by_la(rv_contours, rv_apex, tv_centroid, min_weight)
+
+
+def modify_weights_by_la(contours, apex, mv_centroid, min_weight=0.5):
+    centroids = np.zeros((len(contours), 3))
+    for i, ctr in enumerate(contours):
+        centroids[i] = np.mean(ctr.points, axis=0)
+
+    # Calculate distance to apex
+    dist = np.linalg.norm(centroids-apex, axis=1)
+    dist_mv = np.linalg.norm(mv_centroid-apex)
+
+    dist = dist/dist_mv
+    dist[dist > 1] = 1
+    dist[dist < 0] = 0
+
+    x = np.linspace(0, 1, 100)
+    weight_func = lambda x: np.cos(np.pi/3*(1-4*x))*(x<1/4) + 1*((x>1/4)*(x<3/4)) + np.cos(4*np.pi/3*(x-3/4))*(x>3/4)
+    weight = weight_func(dist)
+
+    # Original weight func has values from 0.5 to 1.0, so if the min_weight is != 0.5, we need to scale it
+    weight = (weight - 0.5)*2*(1.0 - min_weight) + min_weight
+
+    # Scaling weights
+    for i, ctr in enumerate(contours):
+        ctr.weight = weight[i]
+

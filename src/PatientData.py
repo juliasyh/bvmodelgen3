@@ -16,7 +16,7 @@ import cheartio as chio
 from tqdm import tqdm
 
 from niftiutils import readFromNIFTI
-from seg2contours import ViewSegFrame, SegSliceContour, add_apex, add_rv_apex
+from seg2contours import ViewSegFrame, SegSliceContour, add_apex, add_rv_apex, modify_sa_weights
 from segutils import remove_base_nodes, writeResults
 import segutils as su
 import plotutils as pu
@@ -182,7 +182,7 @@ class PatientData:
                                                              'la_4ch': slice_4ch})
             
 
-    def generate_contours(self, min_base_length=15, visualize=True, which_frames=None):
+    def generate_contours(self, min_base_length=15, visualize=True, which_frames=None, sa_min_weight=0.5):
         # Deal with which_frames
         if which_frames is None:
             which_frames = range(self.cmr_data.nframes)
@@ -230,6 +230,9 @@ class PatientData:
             add_apex(contours, self.cmr_data.segs)
             add_rv_apex(contours, self.cmr_data.segs)
             remove_base_nodes(contours, min_length=min_base_length)
+
+            # Modify SA weights
+            modify_sa_weights(contours, min_weight=sa_min_weight)
 
             # Write results
             writeResults(frame_prefix + 'contours.txt', contours)

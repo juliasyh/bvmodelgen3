@@ -104,6 +104,13 @@ def get_mv_points(seg, slice):
         lv_lvbp_border = np.logical_xor(lv_lvbp, morphology.binary_erosion(lv_lvbp, morphology.disk(1)))
         lvbp_border = np.logical_xor(lvbp, morphology.binary_erosion(lvbp, morphology.disk(1)))
         mv_border = lvbp_border*lv_lvbp_border
+
+        # Sanity check: Make sure there's only one border region. This shouldn't happen if the segs are correct!
+        mv_border = morphology.binary_dilation(mv_border, morphology.disk(1))
+        labels = morphology.label(mv_border)
+        largest_label = np.argmax(np.bincount(labels.flat)[1:]) + 1
+        mv_border = labels == largest_label
+        mv_border = morphology.binary_erosion(mv_border, morphology.disk(1))
         
         # Need to find the edge points
         mv_border_points = np.column_stack(np.where(mv_border))
@@ -136,6 +143,9 @@ def get_mv_points(seg, slice):
                 else:
                     mv_points[frame] = np.vstack([mv_edge1, mv_edge2])
         mv_centroids[frame] = np.mean(mv_points[frame], axis=0)
+
+        plt.imshow(lv)
+        plt.plot(mv_points[frame,0], mv_points[frame,1],'o')
 
     return mv_points, mv_centroids
 
@@ -353,13 +363,15 @@ def plot_valve_movement(img, seg, slice=0, valve_points={}, valve_centroids={}):
     point_displays = {}
     for key, item in valve_points.items():
         point_displays[key] = []
-        for i in range(item.shape[1]):
-            aux = ax.plot(item[frame, i, 1], item[frame, i, 0], color[i], label=key)[0]
+        vpoints = item[slice]
+        for i in range(vpoints.shape[1]):
+            aux = ax.plot(vpoints[frame, i, 1], vpoints[frame, i, 0], color[i], label=key)[0]
             point_displays[key].append(aux)
 
     centroid_displays = {}
     for key, item in valve_centroids.items():
-        centroid_displays[key] = ax.plot(item[frame, 1], item[frame, 0], 'ro', label=key)[0]
+        vcentr = item[slice]
+        centroid_displays[key] = ax.plot(vcentr[frame, 1], vcentr[frame, 0], 'ro', label=key)[0]
     
     # Slider axis
     ax_slider = plt.axes([0.25, 0.1, 0.65, 0.03])
@@ -372,11 +384,13 @@ def plot_valve_movement(img, seg, slice=0, valve_points={}, valve_centroids={}):
             seg_display.set_data(np.ma.masked_where(seg.data[..., slice, frame] == 0, seg.data[..., slice, frame]))
 
             for key, item in valve_points.items():
-                for i in range(item.shape[1]):
-                    point_displays[key][i].set_data([item[frame, i, 1]], [item[frame, i, 0]])
+                vpoints = item[slice]
+                for i in range(vpoints.shape[1]):
+                    point_displays[key][i].set_data([vpoints[frame, i, 1]], [vpoints[frame, i, 0]])
 
             for key, item in valve_centroids.items():
-                centroid_displays[key].set_data([item[frame, 1]], [item[frame, 0]])
+                vcentr = item[slice]
+                centroid_displays[key].set_data([vcentr[frame, 1]], [vcentr[frame, 0]])
                 
             fig.canvas.draw_idle()
 

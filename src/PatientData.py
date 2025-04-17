@@ -864,7 +864,7 @@ class ViewSegData:
                 if 'sa' in view:
                     lv = su.remove_holes_islands(lv) - lvbp
                 else:
-                    lv = su.remove_holes_islands(lv)
+                    lv = su.remove_holes_islands(lv+lvbp) - lvbp
 
                 if np.min(lv) < 0:
                     print(f'WARNING: The LV in {view} in slice {i} is not closed, deleting slice data')

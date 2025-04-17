@@ -474,19 +474,28 @@ class GPDataSet(object):
             # (2) Project points to coords X-Y in 2D plane
             # -------------------------------------------------------------------------------
             P_xy = tools.rodrigues_rot(P_centered, normal_valve, [0, 0, 1])
-            #center, r = tools.fit_circle_2d(P_xy[:, 0], P_xy[:, 1])
-            center, axis_l,rotation = tools.fit_elipse_2d(P_xy[:,:2])
-            #C = np.array([center[0], center[1], 0]) + P_mean
+            center, axis_l, rotation = tools.fit_elipse_2d(P_xy[:,:2])
 
+            # Check aspect ratio of the ellipse
+            axis_l = np.sort(axis_l)
+            if axis_l[1]/axis_l[0] > 2:
+                axis_l[0] = axis_l[1]/1.5
+                t = np.array([0, np.pi])
+                new_points = tools.generate_2Delipse_by_vectors(t, center, axis_l,
+                                                        rotation)
+                P_xy = np.vstack((P_xy[:,:2], new_points))
+                center, axis_l, rotation = tools.fit_elipse_2d(P_xy)
+            
             # --- Generate points for fitting circle
             t = np.linspace(-np.pi, np.pi, n)
+        
             new_points = tools.generate_2Delipse_by_vectors(t, center, axis_l,
-                                                     rotation)
-    
+                                                    rotation)
             new_points = np.array([new_points[:, 0], new_points[:, 1],
-                                   [0] * new_points.shape[0]]).T
+                                [0] * new_points.shape[0]]).T
             new_points = tools.rodrigues_rot(new_points,[0,0,1],
-                                             normal_valve)+ P_mean
+                                            normal_valve)+ P_mean
+            
             
         # If MV, we need to warp the ellipsoid to match the bridge better
         if case == 'mv' and mv_av_correction:

@@ -24,7 +24,7 @@ def fit_circle_2d(x, y, w=[]):
     
     # Modify A,b for weighted least squares
     if len(w) == len(x):
-        W = diag(w)
+        W = np.diag(w)
         A = np.dot(W,A)
         b = np.dot(W,b)
     

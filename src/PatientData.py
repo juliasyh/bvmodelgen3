@@ -289,6 +289,8 @@ class PatientData:
 
             print('-------------------------------------------\n')
 
+        self.template = template
+
         if make_vol_mesh:
             return self.surface_meshes, self.volume_meshes
         return self.surface_meshes

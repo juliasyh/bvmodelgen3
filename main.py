@@ -85,6 +85,7 @@ if __name__ ==  '__main__':
 
     # Load segmentations
     pdata.load_segmentations(segs)
+    pdata.cmr_data.clean_segmentations()
 
     # Generate surfaces
     if load_surfaces is None:

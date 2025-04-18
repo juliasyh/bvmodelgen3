@@ -144,9 +144,6 @@ def get_mv_points(seg, slice):
                     mv_points[frame] = np.vstack([mv_edge1, mv_edge2])
         mv_centroids[frame] = np.mean(mv_points[frame], axis=0)
 
-        plt.imshow(lv)
-        plt.plot(mv_points[frame,0], mv_points[frame,1],'o')
-
     return mv_points, mv_centroids
 
 

@@ -478,7 +478,8 @@ class GPDataSet(object):
 
             # Check aspect ratio of the ellipse
             axis_l = np.sort(axis_l)
-            if axis_l[1]/axis_l[0] > 2:
+            if axis_l[1]/axis_l[0] > 1.5:
+                print('wararewar')
                 axis_l[0] = axis_l[1]/1.5
                 t = np.array([0, np.pi])
                 new_points = tools.generate_2Delipse_by_vectors(t, center, axis_l,

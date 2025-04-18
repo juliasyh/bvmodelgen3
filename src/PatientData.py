@@ -569,6 +569,13 @@ class CMRSegData:
         return frames[0]
     
 
+    def clean_segmentations(self):
+
+        for view in self.segs.keys():
+            seg = self.segs[view]
+            seg.clean_data()
+
+
     def extract_slices(self, visualize=True, which_frames=[0]):
         print('Extracting slices...')
 
@@ -826,8 +833,8 @@ class ViewSegData:
         self.pixdim = pixdim
         self.labels = labels
         self.path = path
+        self.data = data
 
-        self.data = self.clean_data(view, data, labels)
         self.shape = data.shape
 
     def inverse_transform(self, point):
@@ -837,20 +844,20 @@ class ViewSegData:
         return ijk
     
 
-    def clean_data(self, view, data, labels):
-        print(f'Cleaning {view} segmentation...')
-        new_data = np.zeros_like(data)
+    def clean_data(self):
+        print(f'Cleaning {self.view} segmentation...')
+        new_data = np.zeros_like(self.data)
 
         # Loop over slices
-        for frame in range(data.shape[3]):
-            for i in range(data.shape[2]):
-                slc = data[:,:,i,frame]
+        for frame in range(self.data.shape[3]):
+            for i in range(self.data.shape[2]):
+                slc = self.data[:,:,i,frame]
 
                 # Get segmentations
-                lv = np.isclose(slc, labels['lv'])
-                rv = np.isclose(slc, labels['rv']) 
-                if view == 'la_2ch': rv[:] = 0
-                lvbp = np.isclose(slc, labels['lvbp'])
+                lv = np.isclose(slc, self.labels['lv'])
+                rv = np.isclose(slc, self.labels['rv']) 
+                if self.view == 'la_2ch': rv[:] = 0
+                lvbp = np.isclose(slc, self.labels['lvbp'])
 
                 mask = lv+rv+lvbp
                 
@@ -861,13 +868,13 @@ class ViewSegData:
                 rv = su.remove_holes_islands(rv).astype(bool)
                 lvbp = su.remove_holes_islands(lvbp).astype(bool)
 
-                if 'sa' in view:
+                if 'sa' in self.view:
                     lv = su.remove_holes_islands(lv) - lvbp
                 else:
                     lv = su.remove_holes_islands(lv+lvbp) - lvbp
 
                 if np.min(lv) < 0:
-                    print(f'WARNING: The LV in {view} in slice {i} is not closed, deleting slice data')
+                    print(f'WARNING: The LV in {self.view} in slice {i} is not closed, deleting slice data')
                     lv[:] = 0
                     lvbp[:] = 0
                     rv[:] = 0
@@ -881,7 +888,7 @@ class ViewSegData:
                     print(f'WARNING: More than one RV object in slice {i} frame {frame}, deleting slice data')
                     rv[:] = 0
                 if (lvbp_n > 1) or (lv_n > 1): 
-                    if 'la' in view:
+                    if 'la' in self.view:
                         raise ValueError(f'ERROR: More than one LV or LVBP object in slice {i} frame {frame}')
                     else:
                         print(f'WARNING: More than one LV or LVBP object in slice {i} frame {frame}, deleting slice data')
@@ -889,7 +896,7 @@ class ViewSegData:
                         lv[:] = 0
                         rv[:] = 0
                     
-                if not np.all(lv == 0) and (view == 'sa'):
+                if not np.all(lv == 0) and (self.view == 'sa'):
                     # Check that the LV is somewhat round
                     try:
                         lv_ecc = su.get_mask_eccentricity(lv)
@@ -907,11 +914,11 @@ class ViewSegData:
                 rv = rv.astype(int)
                 lvbp = lvbp.astype(int)
 
-                new_data[:,:,i,frame] = lv*labels['lv'] + rv*labels['rv'] + lvbp*labels['lvbp']
+                new_data[:,:,i,frame] = lv*self.labels['lv'] + rv*self.labels['rv'] + lvbp*self.labels['lvbp']
                 
 
             # Secondary check for SA. The SA slices with data should be contigous (no gaps)
-            if 'sa' in view:
+            if 'sa' in self.view:
                 sum_data = np.sum(new_data[:,:,:,frame], axis=(0,1))
                 nonzero = np.where(sum_data != 0)[0]
                 diff = np.diff(nonzero)
@@ -936,7 +943,7 @@ class ViewSegData:
                     if i not in nonzero:
                         new_data[:,:,i,frame] = 0
 
-        return new_data
+        self.data = new_data
 
             
 class CMRValveData:

@@ -224,8 +224,7 @@ class PatientData:
                         # Add to contour list
                         cont = SegSliceContour(tv_points, 'tv', slice, view)
                         contours.append(cont)
-
-
+                        
             # # Add apex
             add_apex(contours, self.cmr_data.segs)
             add_rv_apex(contours, self.cmr_data.segs)
@@ -242,10 +241,9 @@ class PatientData:
             io.write(f'{frame_prefix}contours.vtu', mesh)
 
             fig = pu.plot_contours(contours, background=True)
-            pu.save_figure(frame_prefix + 'contours.html', fig)
-
             if visualize:
                 fig.show()
+            pu.save_figure(frame_prefix + 'contours.html', fig)
         
 
     def fit_templates(self, which_frames=None, weight_GP=1, low_smoothing_weight=10, 

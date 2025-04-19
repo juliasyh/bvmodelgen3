@@ -154,6 +154,12 @@ class SegSlice:
             self.has_rv = False
 
         # If doing long axis, remove line segments at base which are common to LVendoCS and LVepiCS.
+        if 'la' in self.view and not is_2chr:
+            # Remove LVendoCS points that are also in LVepiCS
+            [_, ia, ib] = sharedRows(LVendoCS, LVepiCS)
+            LVendoCS = deleteHelper(LVendoCS, ia, axis = 0)
+            LVepiCS = deleteHelper(LVepiCS, ib, axis = 0)
+
         if not LVendoIsEmpty:
             self.lvendo_ijk = np.hstack([LVendoCS, np.full((len(LVendoCS),1), self.slice_number)]).astype(float)
         else:
@@ -469,7 +475,7 @@ def add_rv_apex(contours, segs):
     if len(lafw_contours) == 0:
         return
     tv_points = np.vstack(tv_points)
-    lv_apex = np.vstack(lv_apex)
+    lv_apex = np.vstack(lv_apex[0])
 
     # Merge FW and SEP contours
     rv_contours = []

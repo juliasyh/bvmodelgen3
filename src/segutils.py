@@ -191,8 +191,8 @@ def getLAinsert(inserts, lv_endo_points, lv_epi_points):
 
 def remove_base_nodes(contours, apex=None, mv_centroid=None, min_length=15):
     # Grab la contours
-    la_contours = [ctr for ctr in contours if ('la' in ctr.view) and ('endo' in ctr.ctype or 'epi' in ctr.ctype) and ('lv' in ctr.ctype or 'rv' in ctr.ctype)]
-    sa_contours = [ctr for ctr in contours if ('sa' in ctr.view) and ('endo' in ctr.ctype or 'epi' in ctr.ctype) and ('lv' in ctr.ctype or 'rv' in ctr.ctype)]
+    la_contours = [ctr for ctr in contours if ('la' in ctr.view) and ('endo' in ctr.ctype or 'epi' in ctr.ctype) and ('rv' in ctr.ctype)]
+    sa_contours = [ctr for ctr in contours if ('sa' in ctr.view) and ('endo' in ctr.ctype or 'epi' in ctr.ctype) and ('rv' in ctr.ctype)]
     if apex is None:
         try:
             apex = [ctr.points for ctr in contours if ctr.ctype == 'apexepi'][0]
@@ -240,10 +240,39 @@ def remove_base_nodes(contours, apex=None, mv_centroid=None, min_length=15):
         node_vector = node_vector / np.linalg.norm(node_vector, axis=1)[:, None]
 
         angle = np.arccos(np.abs(np.dot(node_vector, sa_vector)))
-        ind = np.where(angle > np.pi/3)[0][np.array([0,-1])]
+        ind = np.where(angle > np.pi/3)[0]
+        if len(ind) == 0:
+            continue
+        else:
+            ind = ind[np.array([0,-1])]
         base_nodes = base_nodes[np.arange(ind[0], ind[1])]
 
         ctr.points = np.delete(ctr.points, base_nodes, axis=0)
+
+        # import matplotlib.pyplot as plt
+        # from mpl_toolkits.mplot3d import Axes3D
+
+        # # Plot the points and centroids
+        # fig = plt.figure()
+        # ax = fig.add_subplot(111, projection='3d')
+
+        # # Plot all points
+        # for ctr in la_contours:
+        #     points = ctr.points
+        #     ax.scatter(points[:, 0], points[:, 1], points[:, 2], label=ctr.ctype, s=1)
+
+        # # Plot the apex
+        # ax.scatter(apex[0], apex[1], apex[2], color='red', label='Apex', s=50)
+
+        # # Plot the mitral valve centroid
+        # ax.scatter(mv_centroid[0], mv_centroid[1], mv_centroid[2], color='blue', label='MV Centroid', s=50)
+
+        # # Add labels and legend
+        # ax.set_xlabel('X')
+        # ax.set_ylabel('Y')
+        # ax.set_zlabel('Z')
+        # ax.legend()
+        # plt.show()
 
 
 def writeResults(fname, contours, frame=0):

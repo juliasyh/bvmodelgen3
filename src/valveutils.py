@@ -53,6 +53,8 @@ def load_valve_nii(filename, view, frame=0, labels = {'mv': 1, 'tv': 2, 'av': 3,
         return mv_points, tv_points
     
 
+
+
 def get_mv_points(seg, slice):
     """
     Extracts the mitral valve (MV) edge points and centroids for each frame in a given segmentation.
@@ -145,6 +147,8 @@ def get_mv_points(seg, slice):
         mv_centroids[frame] = np.mean(mv_points[frame], axis=0)
 
     return mv_points, mv_centroids
+
+
 
 
 def get_tv_points(seg, tv_seg_points, slice):

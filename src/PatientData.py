@@ -156,10 +156,11 @@ class PatientData:
         
         # Load or find valves
         if load_from_nii:
-            self.valve_data.load_valves_from_nii()
+            self.valve_data.load_valves_from_nii(slices_2ch=slices_2ch, slices_3ch=slices_3ch, slices_4ch=slices_4ch)
         else:
             self.valve_data.find_valves(slices_2ch=slices_2ch, slices_3ch=slices_3ch, slices_4ch=slices_4ch)
         
+        print('Shape of MV valves: ',np.array(self.valve_data.mv_points['la_2ch'][0].tolist()).shape )
         # Save valves
         self.valve_data.save_valves()
 
@@ -1082,10 +1083,88 @@ class CMRValveData:
                 self.tv_centroids[view][slice] = output[3]
 
 
-    def load_valves_from_nii(self):
+    def load_valves_from_nii(self,slices_2ch=[], slices_3ch=[], slices_4ch=[]):
         print('Loading valves from NIfTI files...')
-        raise NotImplementedError('This function is not implemented yet.')
-    
+        nframes=self.segs['la_2ch'].shape[-1]
+
+        view = 'la_2ch'
+        if view in self.valve_paths.keys():
+            mv_pnt_arr=np.zeros([nframes,2,2])
+            mv_cent_arr=np.zeros([nframes,2])
+            for iframe in range(nframes):
+                seg = self.segs[view]
+                nslices = seg.shape[-2]
+                if len(slices_2ch) == 0:
+                    slices_2ch = range(nslices)
+
+                mv_seg_points = vu.load_valve_nii(self.valve_paths[view], view,frame=iframe)
+                
+                for islice in range(nslices):
+                    if nslices > 1:
+                        if islice not in slices_2ch: continue
+                    mv_pnt_arr[iframe,:,:]=mv_seg_points[mv_seg_points[:,2]==islice][:,0:2]
+                    mv_cent_arr[iframe,:]=np.mean(mv_pnt_arr[iframe,:,:], axis=0)
+            
+            self.mv_points[view][islice] = mv_pnt_arr
+            self.mv_centroids[view][islice] = mv_cent_arr
+
+        # For the 3CH we only use one slice
+        view = 'la_3ch'
+        if view in self.valve_paths.keys():
+            mv_pnt_arr=np.zeros([nframes,2,2])
+            mv_cent_arr=np.zeros([nframes,2])
+            av_pnt_arr=np.zeros([nframes,2,2])
+            av_cent_arr=np.zeros([nframes,2])
+            for iframe in range(nframes):
+                seg = self.segs[view]
+                nslices = seg.shape[-2]
+                if len(slices_3ch) == 0:
+                    slices_3ch = range(nslices)
+
+
+                mv_seg_points, av_seg_points = vu.load_valve_nii(self.valve_paths[view], view,frame=iframe)
+
+                for islice in range(nslices):
+                    if nslices > 1:
+                        if islice not in slices_2ch: continue
+                    mv_pnt_arr[iframe,:,:]=mv_seg_points[mv_seg_points[:,2]==islice][:,0:2]
+                    mv_cent_arr[iframe,:]=np.mean(mv_pnt_arr[iframe,:,:], axis=0)
+                    av_pnt_arr[iframe,:,:]=av_seg_points[av_seg_points[:,2]==islice][:,0:2]
+                    av_cent_arr[iframe,:]=np.mean(av_pnt_arr[iframe,:,:], axis=0)
+
+            self.mv_points[view][islice] = mv_pnt_arr
+            self.mv_centroids[view][islice] = mv_cent_arr
+            self.av_points[view][islice] = av_pnt_arr
+            self.av_centroids[view][islice] = av_cent_arr
+
+        # 4CH
+        view = 'la_4ch'
+        if view in self.valve_paths.keys():
+            mv_pnt_arr=np.zeros([nframes,2,2])
+            mv_cent_arr=np.zeros([nframes,2])
+            tv_pnt_arr=np.zeros([nframes,2,2])
+            tv_cent_arr=np.zeros([nframes,2])
+            for iframe in range(nframes):
+                seg = self.segs[view]
+                nslices = seg.shape[-2]
+                if len(slices_4ch) == 0:
+                    slices_4ch = range(nslices)
+                mv_seg_points, tv_seg_points = vu.load_valve_nii(self.valve_paths[view], view,frame=iframe)
+                
+                for islice in range(nslices):
+                    if nslices > 1:
+                        if islice not in slices_2ch: continue
+                    mv_pnt_arr[iframe,:,:]=mv_seg_points[mv_seg_points[:,2]==islice][:,0:2]
+                    mv_cent_arr[iframe,:]=np.mean(mv_pnt_arr[iframe,:,:], axis=0)
+                    tv_pnt_arr[iframe,:,:]=tv_seg_points[tv_seg_points[:,2]==islice][:,0:2]
+                    tv_cent_arr[iframe,:]=np.mean(tv_pnt_arr[iframe,:,:], axis=0)
+
+
+            self.mv_points[view][islice] = mv_pnt_arr
+            self.mv_centroids[view][islice] = mv_cent_arr
+            self.tv_points[view][islice] = tv_pnt_arr
+            self.tv_centroids[view][islice] = tv_cent_arr
+
     
     def visualize_valves(self, imgs, slices_to_plot = {'la_2ch': 0, 'la_3ch': 0, 'la_4ch': 0}):
 
@@ -1103,17 +1182,68 @@ class CMRValveData:
                                 valve_points=valve_points,
                                 valve_centroids=valve_centroids)
 
-    def save_valves(self):
+    def save_valves(self,labels = {'mv': 1, 'tv': 2, 'av': 3, 'pv': 4}):
         for view in self.segs.keys():
             if 'sa' in view: continue
+            # Old numpy saves
             np.save(f'{self.output_fldr}/{view}_mv_points.npy', self.mv_points[view])
             np.save(f'{self.output_fldr}/{view}_mv_centroids.npy', self.mv_centroids[view])
+
+            mv=np.array(self.mv_points[view][0].tolist()) 
+            mv_c=np.array(self.mv_centroids[view][0].tolist()) 
+            img=self.segs[view]
+            data=np.zeros_like(img.data)
+            data_c=np.zeros_like(img.data)
+
+            n_timesteps=self.segs[view].shape[-1]
+
+            for it in range(n_timesteps):
+                p1x,p1y=mv[it,0,:]
+                p2x,p2y=mv[it,1,:]
+                c1x,c1y=mv_c[it,:]
+                data[int(p1x),int(p1y),0,it]=labels['mv']
+                data[int(p2x),int(p2y),0,it]=labels['mv']
+                data_c[int(c1x),int(c1y),0,it]=labels['mv']
+
             if '3ch' in view:
+                av=np.array(self.av_points[view][0].tolist()) 
+                av_c=np.array(self.av_centroids[view][0].tolist()) 
+                
+                for it in range(n_timesteps):
+                    p1x,p1y=av[it,0,:]
+                    p2x,p2y=av[it,1,:]
+                    c1x,c1y=av_c[it,:]
+                    data[int(p1x),int(p1y),0,it]=labels['av']
+                    data[int(p2x),int(p2y),0,it]=labels['av']
+                    data_c[int(c1x),int(c1y),0,it]=labels['av']
+
+                # Old numpy saves
                 np.save(f'{self.output_fldr}/{view}_av_points.npy', self.av_points[view])
                 np.save(f'{self.output_fldr}/{view}_av_centroids.npy', self.av_centroids[view])
+
             elif '4ch' in view:
-                np.save(f'{self.output_fldr}/{view}_tv_points.npy', self.tv_points[view])
-                np.save(f'{self.output_fldr}/{view}_tv_centroids.npy', self.tv_centroids[view])
+                tv=np.array(self.tv_points[view][0].tolist()) 
+                tv_c=np.array(self.tv_centroids[view][0].tolist()) 
+                
+                for it in range(n_timesteps):
+                    p1x,p1y=tv[it,0,:]
+                    p2x,p2y=tv[it,1,:]
+                    c1x,c1y=tv_c[it,:]
+                    data[int(p1x),int(p1y),0,it]=labels['tv']
+                    data[int(p2x),int(p2y),0,it]=labels['tv']
+                    data_c[int(c1x),int(c1y),0,it]=labels['tv']
+
+                    # Old numpy saves
+                    np.save(f'{self.output_fldr}/{view}_tv_points.npy', self.tv_points[view])
+                    np.save(f'{self.output_fldr}/{view}_tv_centroids.npy', self.tv_centroids[view])
+
+            combined_img = nib.Nifti1Image(data, img.affine)
+            combined_img_c = nib.Nifti1Image(data_c, img.affine)
+            outfile=f'{self.output_fldr}/{view}_valves_full.nii.gz'
+            outfile_c=f'{self.output_fldr}/{view}_valve_centroids.nii.gz'
+            nib.save(combined_img, outfile)
+            nib.save(combined_img_c, outfile_c)
+            print('Saving valves...')
 
 
 class FittedTemplate:

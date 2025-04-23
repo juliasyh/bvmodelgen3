@@ -225,7 +225,7 @@ class PatientData:
                         # Add to contour list
                         cont = SegSliceContour(tv_points, 'tv', slice, view)
                         contours.append(cont)
-                        
+
             # # Add apex
             add_apex(contours, self.cmr_data.segs)
             add_rv_apex(contours, self.cmr_data.segs)
@@ -568,11 +568,11 @@ class CMRSegData:
         return frames[0]
     
 
-    def clean_segmentations(self):
+    def clean_segmentations(self, min_ecc=0.6):
 
         for view in self.segs.keys():
             seg = self.segs[view]
-            seg.clean_data()
+            seg.clean_data(min_ecc=min_ecc)
 
 
     def extract_slices(self, visualize=True, which_frames=[0]):
@@ -756,6 +756,8 @@ class CMRSegData:
             which_frames = range(self.nframes)
         elif isinstance(which_frames, int):
             which_frames = [which_frames]
+        elif isinstance(which_frames, list):
+            which_frames = np.array(which_frames)
         else:
             which_frames = list(which_frames)
 
@@ -843,7 +845,7 @@ class ViewSegData:
         return ijk
     
 
-    def clean_data(self):
+    def clean_data(self, min_ecc=0.6):
         print(f'Cleaning {self.view} segmentation...')
         new_data = np.zeros_like(self.data)
 
@@ -873,7 +875,7 @@ class ViewSegData:
                     lv = su.remove_holes_islands(lv+lvbp) - lvbp
 
                 if np.min(lv) < 0:
-                    print(f'WARNING: The LV in {self.view} in slice {i} is not closed, deleting slice data')
+                    print(f'WARNING: The LV in {self.view}, frame {frame}, slice {i} is not closed, deleting slice data')
                     lv[:] = 0
                     lvbp[:] = 0
                     rv[:] = 0
@@ -903,7 +905,8 @@ class ViewSegData:
                         from matplotlib import pyplot as plt
                         plt.imshow(lv)
                         plt.show()
-                    if lv_ecc > 0.6:
+                    if lv_ecc > min_ecc:
+                        print(f'WARNING: The LV eccentricity > {min_ecc} in {self.view}, frame {frame}, slice {i}, deleting slice data')
                         lv[:] = 0
                         lvbp[:] = 0
                         rv[:] = 0

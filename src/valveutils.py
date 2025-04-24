@@ -151,9 +151,16 @@ def get_mv_points(seg, slice):
 
 
 
-def get_tv_points(seg, tv_seg_points, slice):
+def get_tv_points(seg, tv_seg_points, slice, la_mult=1.0):
     # Get shape
     nframes = seg.data.shape[-1]
+
+    # Get LA vector
+    tv_vector = tv_seg_points[1] - tv_seg_points[0]
+    tv_vector = tv_vector / np.linalg.norm(tv_vector)
+    la_vector = np.cross(tv_vector, np.array([0, 0, 1]))
+    la_vector = la_vector / np.linalg.norm(la_vector)
+    la_vector = la_vector[:2]
 
     # Initialize arrays
     tv_points = np.zeros((nframes, 2, 2))
@@ -173,15 +180,31 @@ def get_tv_points(seg, tv_seg_points, slice):
 
         rv_points = np.column_stack(np.where(rv_border))
 
-        tree = KDTree(rv_points)
+        # Ref frame
         if frame == 0:
-            _, ind = tree.query(tv_seg_points)
+            tv_cent = np.mean(tv_seg_points, axis=0)
+            tv_past_points = tv_seg_points - tv_cent
         else:
-            _, ind = tree.query(tv_points_fwd[frame - 1])
+            tv_cent = np.mean(tv_points_fwd[frame-1], axis=0)
+            tv_past_points = tv_points_fwd[frame-1] - tv_cent
+
+        tv_past_la = tv_past_points @ la_vector
+        tv_past_tv = tv_past_points @ tv_vector
+        tv_past_points = np.column_stack(( la_mult *tv_past_la, tv_past_tv))
+
+        rv_points_cent = rv_points - tv_cent
+
+        # Get coords
+        rv_la = rv_points_cent @ la_vector
+        rv_tv = rv_points_cent @ tv_vector
+        rv_la_tv = np.column_stack((la_mult *rv_la, rv_tv))
+
+        # Get closest point
+        tree = KDTree(rv_la_tv)
+        _, ind = tree.query(tv_past_points)
 
         tv_points_fwd[frame] = rv_points[ind]
         tv_centroids_fwd[frame] = np.mean(tv_points_fwd[frame], axis=0)
-
 
     # Same but backwards
     tv_points_bwd = np.zeros((nframes, 2, 2))
@@ -200,18 +223,34 @@ def get_tv_points(seg, tv_seg_points, slice):
 
         tree = KDTree(rv_points)
         if frame == nframes-1:
-            _, ind = tree.query(tv_seg_points)
+            tv_cent = np.mean(tv_seg_points, axis=0)
+            tv_past_points = tv_seg_points - tv_cent
         else:
-            _, ind = tree.query(tv_points_bwd[frame+1])
+            tv_cent = np.mean(tv_points_fwd[frame+1], axis=0)
+            tv_past_points = tv_points_fwd[frame+1] - tv_cent
+
+
+        tv_past_la = tv_past_points @ la_vector
+        tv_past_tv = tv_past_points @ tv_vector
+        tv_past_points = np.column_stack(( la_mult *tv_past_la, tv_past_tv))
+
+        rv_points_cent = rv_points - tv_cent
+
+        # Get coords
+        rv_la = rv_points_cent @ la_vector
+        rv_tv = rv_points_cent @ tv_vector
+        rv_la_tv = np.column_stack((la_mult *rv_la, rv_tv))
+
+        # Get closest point
+        tree = KDTree(rv_la_tv)
+        _, ind = tree.query(tv_past_points)
 
         tv_points_bwd[frame] = rv_points[ind]
         tv_centroids_bwd[frame] = np.mean(tv_points_bwd[frame], axis=0)
 
     # Combine fwd and backward
     tv_centroids_disp_fwd = tv_centroids_fwd - tv_centroids_fwd[0]
-    tv_centroids_disp_bwd = tv_centroids_bwd - tv_centroids_bwd[-1]
     mag_disp_fwd = np.linalg.norm(tv_centroids_disp_fwd, axis=1)
-    mag_disp_bwd = np.linalg.norm(tv_centroids_disp_bwd, axis=1)
 
     peak_fwd = np.argmax(mag_disp_fwd)
 
@@ -226,6 +265,11 @@ def get_tv_points(seg, tv_seg_points, slice):
 def get_2ch_valve_points(seg, mv_seg_points, slice):
     # Find points using the segmentation
     inter_points, _ = get_mv_points(seg, slice=slice)
+
+    # Check if inter_points are flipped
+    dist = cdist(mv_seg_points, inter_points[0])
+    if np.argmin(dist[0]) == 1:
+        mv_seg_points = mv_seg_points[::-1]
 
     # Calculate displacement given by NN segmentation
     mv_disp = inter_points - inter_points[0]

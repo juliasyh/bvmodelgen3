@@ -489,8 +489,8 @@ def add_rv_apex(contours, segs):
     max_slice = max(fw_max, sep_max)
     for i in range(min_slice, max_slice+1):
         # Check if the slice is in the FW or SEP contours
-        if (i < fw_min) or (i > fw_max): continue # This should never happen
-        if (i < sep_min) or (i > sep_max):  
+        if (i < fw_min) or (i > fw_max-1): continue # This should never happen
+        if (i < sep_min) or (i > sep_max-1):  
             rv_contours.append(safw_contours[i-fw_min])
             continue
 

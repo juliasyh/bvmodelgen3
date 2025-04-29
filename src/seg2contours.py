@@ -194,7 +194,10 @@ class SegSlice:
             working_ijk = np.copy(self.lvepi_ijk)
         elif which == 'lvepisep':
             if self.has_rv:
-                working_ijk = [np.copy(self.lvepi_ijk), np.copy(self.rvsep_ijk)]
+                try:
+                    working_ijk = [np.copy(self.lvepi_ijk), np.copy(self.rvsep_ijk)]
+                except:
+                    working_ijk = [np.copy(self.lvepi_ijk)]
                 working_ijk = np.vstack(working_ijk)
             else:
                 working_ijk = np.copy(self.lvepi_ijk)

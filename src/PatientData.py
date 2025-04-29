@@ -160,7 +160,6 @@ class PatientData:
         else:
             self.valve_data.find_valves(slices_2ch=slices_2ch, slices_3ch=slices_3ch, slices_4ch=slices_4ch)
         
-        print('Shape of MV valves: ',np.array(self.valve_data.mv_points['la_2ch'][0].tolist()).shape )
         # Save valves
         self.valve_data.save_valves()
 
@@ -866,13 +865,14 @@ class ViewSegData:
                     continue
 
                 # Clean each segmentation
-                rv = su.remove_holes_islands(rv).astype(bool)
-                lvbp = su.remove_holes_islands(lvbp).astype(bool)
+                min_area = np.sum(mask) * 0.01
+                rv = su.remove_holes_islands(rv, irregMaxSize=min_area).astype(bool)
+                lvbp = su.remove_holes_islands(lvbp, irregMaxSize=min_area).astype(bool)
 
                 if 'sa' in self.view:
-                    lv = su.remove_holes_islands(lv) - lvbp
+                    lv = su.remove_holes_islands(lv, irregMaxSize=min_area) - lvbp
                 else:
-                    lv = su.remove_holes_islands(lv+lvbp) - lvbp
+                    lv = su.remove_holes_islands(lv+lvbp, irregMaxSize=min_area) - lvbp
 
                 if np.min(lv) < 0:
                     print(f'WARNING: The LV in {self.view}, frame {frame}, slice {i} is not closed, deleting slice data')

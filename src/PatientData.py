@@ -1203,36 +1203,34 @@ class CMRValveData:
                     mv=np.array(self.mv_points[view][islc].tolist()) 
                     p1x,p1y=mv[it,0,:]
                     p2x,p2y=mv[it,1,:]
-                    data[int(p1x),int(p1y),0,it]=labels['mv']
-                    data[int(p2x),int(p2y),0,it]=labels['mv']
+                    data[int(p1x),int(p1y),islc,it]=labels['mv']
+                    data[int(p2x),int(p2y),islc,it]=labels['mv']
 
             if '3ch' in view:
-                
                 for it in range(n_timesteps):
                     for islc in range(nslices):
                         av=np.array(self.av_points[view][islc].tolist()) 
                         p1x,p1y=av[it,0,:]
                         p2x,p2y=av[it,1,:]
-                        data[int(p1x),int(p1y),0,it]=labels['av']
-                        data[int(p2x),int(p2y),0,it]=labels['av']
+                        data[int(p1x),int(p1y),islc,it]=labels['av']
+                        data[int(p2x),int(p2y),islc,it]=labels['av']
 
                 # Old numpy saves
                 np.save(f'{self.output_fldr}/{view}_av_points.npy', self.av_points[view])
                 np.save(f'{self.output_fldr}/{view}_av_centroids.npy', self.av_centroids[view])
 
             elif '4ch' in view:
-                
                 for it in range(n_timesteps):
                     for islc in range(nslices):
                         tv=np.array(self.tv_points[view][islc].tolist()) 
                         p1x,p1y=tv[it,0,:]
                         p2x,p2y=tv[it,1,:]
-                        data[int(p1x),int(p1y),0,it]=labels['tv']
-                        data[int(p2x),int(p2y),0,it]=labels['tv']
+                        data[int(p1x),int(p1y),islc,it]=labels['tv']
+                        data[int(p2x),int(p2y),islc,it]=labels['tv']
 
-                    # Old numpy saves
-                    np.save(f'{self.output_fldr}/{view}_tv_points.npy', self.tv_points[view])
-                    np.save(f'{self.output_fldr}/{view}_tv_centroids.npy', self.tv_centroids[view])
+                # Old numpy saves
+                np.save(f'{self.output_fldr}/{view}_tv_points.npy', self.tv_points[view])
+                np.save(f'{self.output_fldr}/{view}_tv_centroids.npy', self.tv_centroids[view])
 
             combined_img = nib.Nifti1Image(data, img.affine)
             outfile=f'{self.output_fldr}/{view}_valves_full.nii.gz'

@@ -1192,60 +1192,51 @@ class CMRValveData:
             np.save(f'{self.output_fldr}/{view}_mv_points.npy', self.mv_points[view])
             np.save(f'{self.output_fldr}/{view}_mv_centroids.npy', self.mv_centroids[view])
 
-            mv=np.array(self.mv_points[view][0].tolist()) 
-            mv_c=np.array(self.mv_centroids[view][0].tolist()) 
             img=self.segs[view]
             data=np.zeros_like(img.data)
-            data_c=np.zeros_like(img.data)
 
             n_timesteps=self.segs[view].shape[-1]
-
+            nslices=self.segs[view].shape[-2]
+                
             for it in range(n_timesteps):
-                p1x,p1y=mv[it,0,:]
-                p2x,p2y=mv[it,1,:]
-                c1x,c1y=mv_c[it,:]
-                data[int(p1x),int(p1y),0,it]=labels['mv']
-                data[int(p2x),int(p2y),0,it]=labels['mv']
-                data_c[int(c1x),int(c1y),0,it]=labels['mv']
+                for islc in range(nslices):
+                    mv=np.array(self.mv_points[view][islc].tolist()) 
+                    p1x,p1y=mv[it,0,:]
+                    p2x,p2y=mv[it,1,:]
+                    data[int(p1x),int(p1y),0,it]=labels['mv']
+                    data[int(p2x),int(p2y),0,it]=labels['mv']
 
             if '3ch' in view:
-                av=np.array(self.av_points[view][0].tolist()) 
-                av_c=np.array(self.av_centroids[view][0].tolist()) 
                 
                 for it in range(n_timesteps):
-                    p1x,p1y=av[it,0,:]
-                    p2x,p2y=av[it,1,:]
-                    c1x,c1y=av_c[it,:]
-                    data[int(p1x),int(p1y),0,it]=labels['av']
-                    data[int(p2x),int(p2y),0,it]=labels['av']
-                    data_c[int(c1x),int(c1y),0,it]=labels['av']
+                    for islc in range(nslices):
+                        av=np.array(self.av_points[view][islc].tolist()) 
+                        p1x,p1y=av[it,0,:]
+                        p2x,p2y=av[it,1,:]
+                        data[int(p1x),int(p1y),0,it]=labels['av']
+                        data[int(p2x),int(p2y),0,it]=labels['av']
 
                 # Old numpy saves
                 np.save(f'{self.output_fldr}/{view}_av_points.npy', self.av_points[view])
                 np.save(f'{self.output_fldr}/{view}_av_centroids.npy', self.av_centroids[view])
 
             elif '4ch' in view:
-                tv=np.array(self.tv_points[view][0].tolist()) 
-                tv_c=np.array(self.tv_centroids[view][0].tolist()) 
                 
                 for it in range(n_timesteps):
-                    p1x,p1y=tv[it,0,:]
-                    p2x,p2y=tv[it,1,:]
-                    c1x,c1y=tv_c[it,:]
-                    data[int(p1x),int(p1y),0,it]=labels['tv']
-                    data[int(p2x),int(p2y),0,it]=labels['tv']
-                    data_c[int(c1x),int(c1y),0,it]=labels['tv']
+                    for islc in range(nslices):
+                        tv=np.array(self.tv_points[view][islc].tolist()) 
+                        p1x,p1y=tv[it,0,:]
+                        p2x,p2y=tv[it,1,:]
+                        data[int(p1x),int(p1y),0,it]=labels['tv']
+                        data[int(p2x),int(p2y),0,it]=labels['tv']
 
                     # Old numpy saves
                     np.save(f'{self.output_fldr}/{view}_tv_points.npy', self.tv_points[view])
                     np.save(f'{self.output_fldr}/{view}_tv_centroids.npy', self.tv_centroids[view])
 
             combined_img = nib.Nifti1Image(data, img.affine)
-            combined_img_c = nib.Nifti1Image(data_c, img.affine)
             outfile=f'{self.output_fldr}/{view}_valves_full.nii.gz'
-            outfile_c=f'{self.output_fldr}/{view}_valve_centroids.nii.gz'
             nib.save(combined_img, outfile)
-            nib.save(combined_img_c, outfile_c)
             print('Saving valves...')
 
 

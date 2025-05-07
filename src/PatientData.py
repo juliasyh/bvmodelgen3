@@ -371,7 +371,7 @@ class PatientData:
         return surfaces
     
 
-    def save_bv_surfaces(self, surfaces, mesh_subdivisions=0, which_frames=None, save_volumes=False):
+    def save_bv_surfaces(self, surfaces, mesh_subdivisions=0, prefix='', which_frames=None, save_volumes=False):
         # Deal with which_frames
         if which_frames is None:
             which_frames = range(self.cmr_data.nframes)
@@ -406,10 +406,10 @@ class PatientData:
                 valve_mesh = mu.subdivide_mesh(valve_mesh, mesh_subdivisions)
                 septum_mesh = mu.subdivide_mesh(septum_mesh, mesh_subdivisions)
 
-            io.write(f'{self.img2model_fldr}/frame{frame}_template.vtu', surface_mesh)
-            io.write(f'{self.img2model_fldr}/frame{frame}_bv_surface.stl', bvmesh)
-            io.write(f'{self.img2model_fldr}/frame{frame}_valve_surfaces.stl', valve_mesh)
-            io.write(f'{self.img2model_fldr}/frame{frame}_septum_surface.stl', septum_mesh)
+            io.write(f'{self.img2model_fldr}/frame{frame}_{prefix}template.vtu', surface_mesh)
+            io.write(f'{self.img2model_fldr}/frame{frame}_{prefix}bv_surface.stl', bvmesh)
+            io.write(f'{self.img2model_fldr}/frame{frame}_{prefix}valve_surfaces.stl', valve_mesh)
+            io.write(f'{self.img2model_fldr}/frame{frame}_{prefix}septum_surface.stl', septum_mesh)
 
             if save_volumes:
                 vol_mesh = self.volume_meshes[frame]

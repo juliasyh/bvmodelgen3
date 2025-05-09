@@ -51,7 +51,7 @@ class PatientData:
         self.cmr_data = None
 
         # Initialize dummy template and list containing the meshes
-        self.template = FittedTemplate(self.img2model_fldr)
+        self.template = FittedTemplate(self.img2model_fldr, filemod='_mod2')
         self.surface_meshes = []
         self.volume_meshes = []
 

@@ -478,7 +478,7 @@ class GPDataSet(object):
 
             # Check aspect ratio of the ellipse
             axis_l = np.sort(axis_l)
-            if axis_l[0]/axis_l[1] > 0.81:      # 0.81 is the sphericicity index found in 10.3389/fcvm.2022.1011931
+            if axis_l[0]/axis_l[1] < 0.81:      # 0.81 is the sphericicity index found in 10.3389/fcvm.2022.1011931
                 axis_l[0] = axis_l[1]*0.81
                 t = np.array([0, np.pi])
                 new_points = tools.generate_2Delipse_by_vectors(t, center, axis_l,

@@ -273,7 +273,7 @@ class PatientData:
             if reuse_control_points and frame > 0:
                 load_control_points = f'{self.img2model_fldr}/frame{frame-1}_control_points.npy'
 
-            template = FittedTemplate(frame_prefix)
+            template = FittedTemplate(frame_prefix, filemod='_mod2')
             template.load_dataset(filename, weight_GP, load_control_points=load_control_points)
 
             template.fit_template(weight_GP, low_smoothing_weight, transmural_weight, rv_thickness)
@@ -1200,6 +1200,7 @@ class CMRValveData:
                 
             for it in range(n_timesteps):
                 for islc in range(nslices):
+                    if self.mv_points[view][islc] is None: continue
                     mv=np.array(self.mv_points[view][islc].tolist()) 
                     p1x,p1y=mv[it,0,:]
                     p2x,p2y=mv[it,1,:]
@@ -1209,6 +1210,7 @@ class CMRValveData:
             if '3ch' in view:
                 for it in range(n_timesteps):
                     for islc in range(nslices):
+                        if self.av_points[view][islc] is None: continue
                         av=np.array(self.av_points[view][islc].tolist()) 
                         p1x,p1y=av[it,0,:]
                         p2x,p2y=av[it,1,:]
@@ -1222,6 +1224,7 @@ class CMRValveData:
             elif '4ch' in view:
                 for it in range(n_timesteps):
                     for islc in range(nslices):
+                        if self.tv_points[view][islc] is None: continue
                         tv=np.array(self.tv_points[view][islc].tolist()) 
                         p1x,p1y=tv[it,0,:]
                         p2x,p2y=tv[it,1,:]
@@ -1246,13 +1249,13 @@ class FittedTemplate:
                                 'sa_lv_epi': 1, 'sa_lv_endo': 2, 'sa_rv_endo': 1, 'sa_rv_epi': 1 }
     
 
-    def __init__(self, out_prefix):
+    def __init__(self, out_prefix, filemod='_mod'):
         self.out_prefix = out_prefix
         self.load_control_points = None
 
         # Loads biventricular control_mesh
         model_path = f"{filepath}/bvfitting/template" # folder of the control mesh
-        self.bvmodel = BiventricularModel(model_path, filemod='_mod')
+        self.bvmodel = BiventricularModel(model_path, filemod=filemod)
         self.labels = self.bvmodel.surfs
         self.patches = {'lv_endo': 0,
                         'lv_epi': 8,
@@ -1264,6 +1267,9 @@ class FittedTemplate:
                         'tv': 13,
                         'av': 10,
                         'pv': 11,}
+        
+        if filemod == '_mod2':
+            self.patches['rvlv'] = 14
 
         self.dataset = None
 
@@ -1275,6 +1281,8 @@ class FittedTemplate:
 
         # List of labels for each region of interest
         self.bv_labels = [0,8,2,3,1,9,10,11,12,13]
+        if filemod == '_mod2':
+            self.bv_labels = [0,8,2,3,1,14,10,11,12,13]
         self.valve_labels = [12,13,10,11]
         self.septum_labels = [1]
             

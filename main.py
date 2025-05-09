@@ -18,7 +18,7 @@ if __name__ ==  '__main__':
     # Options
     interpolate_segmentations = 'max'  # ('max', 'min', int, None) means to interpolate the segmentations to the max or min number of frames, 
                                        # or to a specific number of frames. None means not to interpolate.
-    nn_segmentation = True             # Use nn to create segmentations, if False, it will load them from the paths defined in segs
+    nn_segmentation = False             # Use nn to create segmentations, if False, it will load them from the paths defined in segs
     align_segmentations = True
     visualize = False
     smooth_in_time = True
@@ -40,7 +40,7 @@ if __name__ ==  '__main__':
     which_frames = [0]  # None means all frames. Remember Python starts with 0!
 
     # Paths to the valve segmentations    
-    valves_3ch_slice = []  # The slice to use for the 3-chamber view. Only use one slice!
+    valves_3ch_slice = [1]  # The slice to use for the 3-chamber view. Only use one slice!
     valves = {'la_2ch': imgs_path + 'LA_2CH_valves',
               'la_3ch': imgs_path + 'LA_3CH_valves',
               'la_4ch': imgs_path + 'LA_4CH_valves'}

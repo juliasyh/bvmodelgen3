@@ -17,7 +17,7 @@ from batchgenerators.utilities.file_and_folder_operations import join
 from nnunetv2.inference.predict_from_raw_data import nnUNetPredictor
 
 dataset_by_view = {'sa': 'Dataset041_ACDC',
-                   'la_2ch': 'Dataset042_LA_2CH',
+                   'la_2ch': 'Dataset042_2CH',
                    'la_3ch': 'Dataset043_LA_3CH',
                    'la_4ch': 'Dataset044_LA_4CH'}
 

@@ -11,8 +11,6 @@ os.environ['OPENBLAS_NUM_THREADS'] = '1'
 os.environ['MKL_NUM_THREADS'] = '1'
 os.environ['OMP_NUM_THREADS'] = '1'
 
-from multiprocessing import Pool
-
 import numpy as np
 import nibabel as nib
 import meshio as io
@@ -332,7 +330,7 @@ class PatientData:
         return self.surface_meshes
 
 
-    def correct_surfaces_by_volumes(self, surfaces, which_frames=None):
+    def correct_surfaces_by_volumes(self, surfaces, parallelize=1, which_frames=None):
         # Deal with which_frames
         if which_frames is None:
             which_frames = range(self.cmr_data.nframes)
@@ -341,15 +339,20 @@ class PatientData:
         else:
             which_frames = list(which_frames)
 
-        # Only do this if the whole cycle is considered
-        if len(which_frames) != self.cmr_data.nframes:
-            print('Correcting BV surfaces by volumes is only available for the whole cycle. \n'
-                'Returning without correcting.')
-            return surfaces
+        # # Only do this if the whole cycle is considered
+        # if len(which_frames) != self.cmr_data.nframes:
+        #     print('Correcting BV surfaces by volumes is only available for the whole cycle. \n'
+        #         'Returning without correcting.')
+        #     return surfaces
         
-        print('Correcting BV surfaces by volumes...')
         labels = self.template.labels
-        new_surfaces = mu.volume_match_correction(surfaces, labels)
+        if parallelize > 1:
+            import multiproccesingutils as mpu
+            new_surfaces = mpu.correct_surface_by_volume_parallel(parallelize, surfaces, labels)
+        else:
+            print('Correcting BV surfaces by volumes...')
+            new_surfaces = mu.volume_match_correction(surfaces, labels)
+
         self.surface_meshes = new_surfaces
 
         return self.surface_meshes

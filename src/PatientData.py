@@ -7,6 +7,11 @@ Created on 2024/11/16 15:55:30
 '''
 
 import os
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
+os.environ['MKL_NUM_THREADS'] = '1'
+os.environ['OMP_NUM_THREADS'] = '1'
+
+from multiprocessing import Pool
 
 import numpy as np
 import nibabel as nib
@@ -22,6 +27,7 @@ import segutils as su
 import plotutils as pu
 import valveutils as vu
 import modelutils as mu
+
 import slicealign as slicealign
 from bvfitting import BiventricularModel, GPDataSet, ContourType
 
@@ -247,7 +253,8 @@ class PatientData:
         
 
     def fit_templates(self, which_frames=None, weight_GP=1, low_smoothing_weight=10, 
-                      transmural_weight=20, rv_thickness=3, reuse_control_points=False, make_vol_mesh=False):
+                      transmural_weight=20, rv_thickness=3, reuse_control_points=False, 
+                      make_vol_mesh=False, parallelize=1):
         # Deal with which_frames
         if which_frames is None:
             which_frames = range(self.cmr_data.nframes)
@@ -262,32 +269,39 @@ class PatientData:
         if make_vol_mesh:
             self.volume_meshes = []
 
-        for frame in range(self.cmr_data.nframes):
-            if frame not in which_frames:
-                self.surface_meshes.append(None)
-                continue
-            print(f'Fitting template for frame {frame}...')
-            frame_prefix = f'{self.img2model_fldr}/frame{frame}_'
+        if parallelize > 1:
+            import multiproccesingutils as mpu
 
-            filename = frame_prefix + 'contours.txt'
-            if reuse_control_points and frame > 0:
-                load_control_points = f'{self.img2model_fldr}/frame{frame-1}_control_points.npy'
+            print('Fitting templates in parallel...')
+            self.surface_meshes = mpu.fit_templates_parallel(parallelize, self.img2model_fldr, which_frames, weight_GP, 
+                                                             low_smoothing_weight, transmural_weight, 
+                                                             rv_thickness, load_control_points=load_control_points)
 
-            template = FittedTemplate(frame_prefix, filemod='_mod2')
-            template.load_dataset(filename, weight_GP, load_control_points=load_control_points)
+        else:
+            for frame in range(self.cmr_data.nframes):
+                if frame not in which_frames:
+                    self.surface_meshes.append(None)
+                    continue
+                print(f'Fitting template for frame {frame}...')
+                frame_prefix = f'{self.img2model_fldr}/frame{frame}_'
 
-            template.fit_template(weight_GP, low_smoothing_weight, transmural_weight, rv_thickness)
-            surface_mesh = template.bvmodel.get_template_mesh()
+                filename = frame_prefix + 'contours.txt'
+                if reuse_control_points and frame > 0:
+                    load_control_points = f'{self.img2model_fldr}/frame{frame-1}_control_points.npy'
 
-            if make_vol_mesh:
-                vol_mesh = template.make_volumetric_mesh()
-                self.volume_meshes.append(vol_mesh)
+                template = FittedTemplate(frame_prefix, filemod='_mod2')
+                template.load_dataset(filename, weight_GP, load_control_points=load_control_points)
 
-            self.surface_meshes.append(surface_mesh)
+                template.fit_template(weight_GP, low_smoothing_weight, transmural_weight, rv_thickness)
+                surface_mesh = template.bvmodel.get_template_mesh()
 
-            print('-------------------------------------------\n')
+                if make_vol_mesh:
+                    vol_mesh = template.make_volumetric_mesh()
+                    self.volume_meshes.append(vol_mesh)
 
-        self.template = template
+                self.surface_meshes.append(surface_mesh)
+
+                print('-------------------------------------------\n')
 
         if make_vol_mesh:
             return self.surface_meshes, self.volume_meshes
@@ -341,7 +355,7 @@ class PatientData:
         return self.surface_meshes
 
 
-    def load_surfaces(self, which_frames=None):
+    def load_surfaces(self, which_frames=None, prefix=''):
         """
         Loads the surfaces from a file.
 
@@ -364,7 +378,7 @@ class PatientData:
             if frame not in which_frames:
                 surfaces.append(None)
                 continue
-            surface_mesh = io.read(f'{self.img2model_fldr}/frame{frame}_template.vtu')
+            surface_mesh = io.read(f'{self.img2model_fldr}/{prefix}frame{frame}_template.vtu')
             surfaces.append(surface_mesh)
             self.surface_meshes.append(surface_mesh)
 
@@ -406,10 +420,10 @@ class PatientData:
                 valve_mesh = mu.subdivide_mesh(valve_mesh, mesh_subdivisions)
                 septum_mesh = mu.subdivide_mesh(septum_mesh, mesh_subdivisions)
 
-            io.write(f'{self.img2model_fldr}/frame{frame}_{prefix}template.vtu', surface_mesh)
-            io.write(f'{self.img2model_fldr}/frame{frame}_{prefix}bv_surface.stl', bvmesh)
-            io.write(f'{self.img2model_fldr}/frame{frame}_{prefix}valve_surfaces.stl', valve_mesh)
-            io.write(f'{self.img2model_fldr}/frame{frame}_{prefix}septum_surface.stl', septum_mesh)
+            io.write(f'{self.img2model_fldr}/{prefix}frame{frame}_template.vtu', surface_mesh)
+            io.write(f'{self.img2model_fldr}/{prefix}frame{frame}_bv_surface.stl', bvmesh)
+            io.write(f'{self.img2model_fldr}/{prefix}frame{frame}_valve_surfaces.stl', valve_mesh)
+            io.write(f'{self.img2model_fldr}/{prefix}frame{frame}_septum_surface.stl', septum_mesh)
 
             if save_volumes:
                 vol_mesh = self.volume_meshes[frame]
@@ -1310,7 +1324,7 @@ class FittedTemplate:
                                                             self.bvmodel.control_mesh])
             
 
-    def fit_template(self, weight_GP, low_smoothing_weight, transmural_weight, rv_thickness):
+    def fit_template(self, weight_GP, low_smoothing_weight, transmural_weight, rv_thickness, verbose=True):
 
         # Create valve phantom points
         mitral_points = self.dataset.create_valve_phantom_points(30, ContourType.MITRAL_VALVE)
@@ -1346,19 +1360,26 @@ class FittedTemplate:
         self.dataset.assign_weights(self.template_fitting_weights)
 
         # 'Stiff' fit - implicit diffeomorphic constraints
-        self.bvmodel.MultiThreadSmoothingED(weight_GP, self.dataset)
+        out1 = self.bvmodel.MultiThreadSmoothingED(weight_GP, self.dataset, verbose=verbose, return_log=(not verbose))
 
         model = self.bvmodel.PlotSurface("rgb(0,127,0)", "rgb(0,0,127)", "rgb(127,0,0)","Initial model","all")
         pu.plot_surface(model, contourPlots, out_path=self.out_prefix + 'step1_fitted.html')
 
         # 'Soft' fit - explicit diffeomorphic constraints
-        self.bvmodel.SolveProblemCVXOPT(self.dataset,weight_GP,low_smoothing_weight,transmural_weight)
+        out2 = self.bvmodel.SolveProblemCVXOPT(self.dataset,weight_GP,low_smoothing_weight,transmural_weight, 
+                                        verbose=verbose, return_log=(not verbose))
 
         model = self.bvmodel.PlotSurface("rgb(0,127,0)", "rgb(0,0,127)", "rgb(127,0,0)","Initial model","all")
 
         pu.plot_surface(model, contourPlots, out_path=self.out_prefix + 'step2_fitted.html')
 
         self.template_mesh = self.bvmodel.get_template_mesh()
+
+        if not verbose:
+            log1 = out1[1]
+            log2 = out2[1]
+            log = log1 + log2
+            return log
 
 
     def get_surface_mesh(self, mesh_subdivisions=2):

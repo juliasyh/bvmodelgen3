@@ -1,4 +1,5 @@
 import os
+
 import numpy as np
 import pandas as pd
 import functools
@@ -710,7 +711,7 @@ class BiventricularModel():
 
         return np.asmatrix(constraints)
 
-    def MultiThreadSmoothingED(self, weight_GP, data_set):
+    def MultiThreadSmoothingED(self, weight_GP, data_set, verbose=True, return_log=False):
         """ This function performs a series of LLS fits. At each iteration the
         least squares optimisation is performed and the determinant of the
         Jacobian matrix is calculated.
@@ -731,11 +732,16 @@ class BiventricularModel():
         factor = 5
         min_jacobian = 0.1
 
+        log = []
         while (isdiffeo == 1) & (high_weight > weight_GP*1e2) & (iteration <50):
 
             displacement, err  = self.lls_fit_model(weight_GP, data_set,
                                                     high_weight)
-            print('     Iteration #' + str(iteration) + ' ICF error ' + str(err))
+            
+            if verbose:
+                print('     Iteration #' + str(iteration) + ' ICF error ' + str(err))
+            if return_log:
+                log.append('     Iteration #' + str(iteration) + ' ICF error ' + str(err))
 
             isdiffeo = self.is_diffeomorphic(np.add(self.control_mesh, displacement),
                                              min_jacobian)
@@ -759,9 +765,15 @@ class BiventricularModel():
 
             iteration = iteration + 1
 
-        print("End of the implicitly constrained fit")
-        print("--- %s seconds ---" % (time.time() - start_time))
-        return high_weight
+        if verbose:
+            print("End of the implicitly constrained fit")
+            print("--- %s seconds ---" % (time.time() - start_time))
+        if return_log:
+            log.append("End of the implicitly constrained fit")
+            log.append("--- %s seconds ---" % (time.time() - start_time))
+            return self.control_mesh, log
+        
+        return self.control_mesh
 
 
     def lls_fit_model(self, weight_GP, data_set, smoothing_Factor ):
@@ -845,7 +857,7 @@ class BiventricularModel():
                                 transmural_weight)
 
     def SolveProblemCVXOPT(self, data_set, weight_GP, low_smoothing_weight,
-                           transmural_weight):
+                           transmural_weight, verbose=True, return_log=False):
         """ This function performs the proper diffeomorphic fit.
             Input:
                 case: case name
@@ -890,10 +902,20 @@ class BiventricularModel():
         step_err = np.linalg.norm(data_points - prior_position, axis=1)
         step_err = np.sum(np.power( step_err, 2))
         step_err = np.sqrt(step_err/len(prior_position))
-        print('Explicitly constrained fit')
+        log = []
+        if verbose:
+            print('Explicitly constrained fit')
+        if return_log:
+            log.append('Explicitly constrained fit')
+            
         while abs(step_err - previous_step_err) > tol and iteration < 10:
-            print('     Iteration #' + str(iteration + 1) + ' ECF error ' + str(
-                step_err))
+            if verbose:
+                print('     Iteration #' + str(iteration + 1) + ' ECF error ' + str(
+                    step_err))
+            if return_log:
+                log.append('     Iteration #' + str(iteration + 1) + ' ECF error ' + str(
+                    step_err))
+
             previous_step_err = step_err
 
             linear_part_x = matrix((2 * np.dot(prev_displacement[:, 0].T, A)
@@ -958,8 +980,12 @@ class BiventricularModel():
                 step_err = np.sum(np.power(step_err, 2))
                 step_err = np.sqrt(step_err / len(prior_position))
                 iteration = iteration + 1
-                print('Diffeomorphic condition not verified ')
-                break
+                if verbose:
+                    print('Diffeomorphic condition not verified ')
+                if return_log:
+                    log.append('Diffeomorphic condition not verified ')
+                
+                return False
 
             else:
                 prev_displacement[:, 0] = prev_displacement[:, 0] + sx
@@ -976,10 +1002,15 @@ class BiventricularModel():
                 iteration = iteration + 1
 
 
+        if verbose:
+            print("End of the explicitly constrained fit")
+            print("--- %s seconds ---" % (time.time() - start_time))
+        if return_log:
+            log.append("End of the explicitly constrained fit")
+            log.append("--- %s seconds ---" % (time.time() - start_time))
+            return True, log
 
-        print("--- End of the explicitly constrained fit ---")
-        print("--- %s seconds ---" % (time.time() - start_time))
-
+        return True
 
 
     def PlotSurface(self, face_color_LV, face_color_RV, face_color_epi, my_name,

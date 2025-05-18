@@ -478,7 +478,7 @@ def add_rv_apex(contours, segs):
     if len(lafw_contours) == 0:
         return
     tv_points = np.vstack(tv_points)
-    lv_apex = np.vstack(lv_apex[0])
+    lv_apex = lv_apex[0]
 
     # Merge FW and SEP contours
     rv_contours = []
@@ -559,6 +559,10 @@ def add_rv_apex(contours, segs):
     sa_la_vector = sa_la_vector/np.linalg.norm(sa_la_vector)
     aux = -dist_z/(np.dot(sa_la_vector, la_vector))
     rv_apex = sa0_centroid + aux*sa_la_vector/2
+
+    # Check that the rv_apex is is not lower than the lv_apex
+    if np.dot(rv_apex-lv_apex, la_vector) < 0:
+        rv_apex = rv_apex + (np.dot(rv_apex-lv_apex, la_vector))*la_vector
 
     ctr = SegSliceContour(rv_apex, 'rvapex', 0, 'la')
     contours += [ctr]

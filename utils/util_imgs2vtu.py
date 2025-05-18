@@ -54,8 +54,8 @@ def generate_plane(img, affine, translation=np.array([0,0]), slice=0, time_frame
     return mesh, transformed
 
 
-imgs_fldr = '../test_data/Images/'
-img2model_fldr = '../test_data/Images/img2model/'
+imgs_fldr = '/Users/jjv/University of Michigan Dropbox/Javiera Jilberto Vallejos/Projects/Desmoplakin/Models/DSPPatients2/DSP-11/Images/'
+img2model_fldr = f'{imgs_fldr}/img2model/'
 if not os.path.exists(f'{imgs_fldr}/img_vtus/'):
     os.makedirs(f'{imgs_fldr}/img_vtus/')
 
@@ -85,7 +85,7 @@ for key in img_paths.keys():
 for key in img_paths.keys():
     img = imgs[key]
     affine = affines[key]
-    slice_index = 10 if key == 'sa' else 0  # Use slice=10 for 'sa', otherwise slice=0
+    slice_index = 5 if key == 'sa' else 0  # Use slice=10 for 'sa', otherwise slice=0
 
     # Load translations
     translations = np.load(f'{img2model_fldr}/frame{0}_{key.lower()}_translations.npy')

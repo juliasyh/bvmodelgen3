@@ -283,8 +283,8 @@ def get_chamber_meshes(points, cells, surfs):
 
 def get_lv_rv_surface_mesh(points, cells, surfs):
     # Surfaces defining BiV
-    lv_surfs = [0,1,8,9,10,12]
-    rv_surfs = [2,3,9,11,13]
+    lv_surfs = [0,1,8,14,10,12]
+    rv_surfs = [2,3,14,11,13]
 
     lv_marker = np.isin(surfs, lv_surfs)
     lv_mesh = io.Mesh(points, {'triangle': cells[lv_marker]})

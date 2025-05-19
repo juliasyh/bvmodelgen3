@@ -984,8 +984,11 @@ class BiventricularModel():
                     print('Diffeomorphic condition not verified ')
                 if return_log:
                     log.append('Diffeomorphic condition not verified ')
-                
-                return False
+                        
+                if verbose:
+                    return False
+                if return_log:
+                    return False, log
 
             else:
                 prev_displacement[:, 0] = prev_displacement[:, 0] + sx

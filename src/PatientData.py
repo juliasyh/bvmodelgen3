@@ -339,11 +339,11 @@ class PatientData:
         else:
             which_frames = list(which_frames)
 
-        # # Only do this if the whole cycle is considered
-        # if len(which_frames) != self.cmr_data.nframes:
-        #     print('Correcting BV surfaces by volumes is only available for the whole cycle. \n'
-        #         'Returning without correcting.')
-        #     return surfaces
+        # Only do this if the whole cycle is considered
+        if len(which_frames) != self.cmr_data.nframes:
+            print('Correcting BV surfaces by volumes is only available for the whole cycle. \n'
+                'Returning without correcting.')
+            return surfaces
         
         labels = self.template.labels
         if parallelize > 1:
@@ -388,7 +388,7 @@ class PatientData:
         return surfaces
     
 
-    def save_bv_surfaces(self, surfaces, mesh_subdivisions=0, prefix='', which_frames=None, save_volumes=False):
+    def save_bv_surfaces(self, surfaces, mesh_subdivisions=0, prefix='', which_frames=None, save_volumes=False, save_simmodeler=False):
         # Deal with which_frames
         if which_frames is None:
             which_frames = range(self.cmr_data.nframes)
@@ -407,26 +407,27 @@ class PatientData:
             if frame not in which_frames:
                 continue
             surface_mesh = surfaces[frame]
-
-            # Extract bvmesh
-            bvmesh = mu.extract_subregion(surface_mesh, labels, bv_regions)
-
-            # Extract valve mesh
-            valve_mesh = mu.extract_subregion(surface_mesh, labels, valve_regions)
-
-            # Extract septum mesh
-            septum_mesh = mu.extract_subregion(surface_mesh, labels, septum_regions)
-
+            io.write(f'{self.img2model_fldr}/{prefix}frame{frame}_template.vtu', surface_mesh)
+            
             # Subdivide the mesh
             if mesh_subdivisions > 0:
                 bvmesh = mu.subdivide_mesh(bvmesh, mesh_subdivisions)
                 valve_mesh = mu.subdivide_mesh(valve_mesh, mesh_subdivisions)
                 septum_mesh = mu.subdivide_mesh(septum_mesh, mesh_subdivisions)
 
-            io.write(f'{self.img2model_fldr}/{prefix}frame{frame}_template.vtu', surface_mesh)
-            io.write(f'{self.img2model_fldr}/{prefix}frame{frame}_bv_surface.stl', bvmesh)
-            io.write(f'{self.img2model_fldr}/{prefix}frame{frame}_valve_surfaces.stl', valve_mesh)
-            io.write(f'{self.img2model_fldr}/{prefix}frame{frame}_septum_surface.stl', septum_mesh)
+            if save_simmodeler:
+                # Extract bvmesh
+                bvmesh = mu.extract_subregion(surface_mesh, labels, bv_regions)
+
+                # Extract valve mesh
+                valve_mesh = mu.extract_subregion(surface_mesh, labels, valve_regions)
+
+                # Extract septum mesh
+                septum_mesh = mu.extract_subregion(surface_mesh, labels, septum_regions)
+
+                io.write(f'{self.img2model_fldr}/{prefix}frame{frame}_bv_surface.stl', bvmesh)
+                io.write(f'{self.img2model_fldr}/{prefix}frame{frame}_valve_surfaces.stl', valve_mesh)
+                io.write(f'{self.img2model_fldr}/{prefix}frame{frame}_septum_surface.stl', septum_mesh)
 
             if save_volumes:
                 vol_mesh = self.volume_meshes[frame]

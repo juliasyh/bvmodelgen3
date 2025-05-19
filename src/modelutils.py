@@ -244,6 +244,8 @@ def adjust_valve_centroids(points, cells, surfs):
     tv = 6
     pv = 7
     lv_epi = 8
+    lv_endo = 0
+    rv_endo = 2
 
     pv_cent_node = 5729
     av_cent_node = 5655
@@ -252,13 +254,15 @@ def adjust_valve_centroids(points, cells, surfs):
 
 
     # Grab relevant nodes
+    lv_endo_nodes = np.unique(cells[surfs == lv_endo])
+    rv_endo_nodes = np.unique(cells[surfs == rv_endo])
     lv_epi_nodes = np.unique(cells[surfs == lv_epi])
     rv_epi_nodes = np.unique(cells[surfs == rv_epi])
 
-    mv_nodes = np.intersect1d(lv_epi_nodes, np.unique(cells[surfs == mv]))
-    av_nodes = np.intersect1d(lv_epi_nodes, np.unique(cells[surfs == av]))
-    tv_nodes = np.intersect1d(rv_epi_nodes, np.unique(cells[surfs == tv]))
-    pv_nodes = np.intersect1d(rv_epi_nodes, np.unique(cells[surfs == pv]))
+    mv_nodes = np.intersect1d(lv_endo_nodes, np.unique(cells[surfs == mv]))
+    av_nodes = np.intersect1d(lv_endo_nodes, np.unique(cells[surfs == av]))
+    tv_nodes = np.intersect1d(rv_endo_nodes, np.unique(cells[surfs == tv]))
+    pv_nodes = np.intersect1d(rv_endo_nodes, np.unique(cells[surfs == pv]))
 
     points[mv_cent_node] = np.mean(points[mv_nodes], axis=0)
     points[av_cent_node] = np.mean(points[av_nodes], axis=0)

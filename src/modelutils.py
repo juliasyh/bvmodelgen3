@@ -238,12 +238,10 @@ def volume_match_correction(surfaces, labels):
 
 
 def adjust_valve_centroids(points, cells, surfs):
-    rv_epi = 3
     mv = 4
     av = 5
     tv = 6
     pv = 7
-    lv_epi = 8
     lv_endo = 0
     rv_endo = 2
 
@@ -252,12 +250,9 @@ def adjust_valve_centroids(points, cells, surfs):
     mv_cent_node = 5630
     tv_cent_node = 5696
 
-
     # Grab relevant nodes
     lv_endo_nodes = np.unique(cells[surfs == lv_endo])
     rv_endo_nodes = np.unique(cells[surfs == rv_endo])
-    lv_epi_nodes = np.unique(cells[surfs == lv_epi])
-    rv_epi_nodes = np.unique(cells[surfs == rv_epi])
 
     mv_nodes = np.intersect1d(lv_endo_nodes, np.unique(cells[surfs == mv]))
     av_nodes = np.intersect1d(lv_endo_nodes, np.unique(cells[surfs == av]))

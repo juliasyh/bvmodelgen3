@@ -150,7 +150,6 @@ def get_mv_points(seg, slice):
 
 
 
-
 def get_tv_points(seg, tv_seg_points, slice, la_mult=1.0):
     # Get shape
     nframes = seg.data.shape[-1]
@@ -166,117 +165,106 @@ def get_tv_points(seg, tv_seg_points, slice, la_mult=1.0):
     tv_points = np.zeros((nframes, 2, 2))
     tv_centroids = np.zeros((nframes, 2))
 
-    width_ratio = 10.0
-    it = 0
-    # https://doi.org/10.1016/j.echo.2014.09.017 says TV ratio changes around 30%.
-    # I used a 2x threshold because if not it was too strict
-
-    print('Finding TV points... (we need to do this better!!)')
-    while width_ratio > 2: 
-
-        # Find points by looking at the closer point in the next frame
-        tv_points_fwd = np.zeros((nframes, 2, 2))
-        tv_centroids_fwd = np.zeros((nframes, 2))
-        for frame in range(nframes):
-            data = seg.data[..., slice, frame]
-            rv = data == seg.labels['rv']
-            lv = data == seg.labels['lv']
-            
-            # Get rv border
-            rv_border = rv ^ morphology.binary_erosion(rv)
-            rv_border[morphology.binary_dilation(lv)] = 0
-
-            rv_points = np.column_stack(np.where(rv_border))
-
-            # Ref frame
-            if frame == 0:
-                tv_cent = np.mean(tv_seg_points, axis=0)
-                tv_past_points = tv_seg_points - tv_cent
-            else:
-                tv_cent = np.mean(tv_points_fwd[frame-1], axis=0)
-                tv_past_points = tv_points_fwd[frame-1] - tv_cent
-
-            tv_past_la = tv_past_points @ la_vector
-            tv_past_tv = tv_past_points @ tv_vector
-            tv_past_points = np.column_stack(( la_mult *tv_past_la, tv_past_tv))
-
-            rv_points_cent = rv_points - tv_cent
-
-            # Get coords
-            rv_la = rv_points_cent @ la_vector
-            rv_tv = rv_points_cent @ tv_vector
-            rv_la_tv = np.column_stack((la_mult *rv_la, rv_tv))
-
-            # Get closest point
-            tree = KDTree(rv_la_tv)
-            _, ind = tree.query(tv_past_points)
-
-            tv_points_fwd[frame] = rv_points[ind]
+    # Find points by looking at the closer point in the next frame
+    tv_points_fwd = np.zeros((nframes, 2, 2))
+    tv_centroids_fwd = np.zeros((nframes, 2))
+    for frame in range(nframes):
+        # Ref frame
+        if frame == 0:
+            tv_cent = np.mean(tv_seg_points, axis=0)
+            tv_past_points = tv_seg_points - tv_cent
+            tv_points_fwd[frame] = tv_seg_points
             tv_centroids_fwd[frame] = np.mean(tv_points_fwd[frame], axis=0)
+            continue
 
-        # Same but backwards
-        tv_points_bwd = np.zeros((nframes, 2, 2))
-        tv_centroids_bwd = np.zeros((nframes, 2))
-
-        for frame in reversed(range(nframes)):
-            data = seg.data[..., slice, frame]
-            rv = data == seg.labels['rv']
-            lv = data == seg.labels['lv']
-            
-            # Get rv border
-            rv_border = rv ^ morphology.binary_erosion(rv)
-            rv_border[morphology.binary_dilation(lv)] = 0
-
-            rv_points = np.column_stack(np.where(rv_border))
-
-            tree = KDTree(rv_points)
-            if frame == nframes-1:
-                tv_cent = np.mean(tv_seg_points, axis=0)
-                tv_past_points = tv_seg_points - tv_cent
-            else:
-                tv_cent = np.mean(tv_points_fwd[frame+1], axis=0)
-                tv_past_points = tv_points_fwd[frame+1] - tv_cent
-
-
-            tv_past_la = tv_past_points @ la_vector
-            tv_past_tv = tv_past_points @ tv_vector
-            tv_past_points = np.column_stack(( la_mult *tv_past_la, tv_past_tv))
-
-            rv_points_cent = rv_points - tv_cent
-
-            # Get coords
-            rv_la = rv_points_cent @ la_vector
-            rv_tv = rv_points_cent @ tv_vector
-            rv_la_tv = np.column_stack((la_mult *rv_la, rv_tv))
-
-            # Get closest point
-            tree = KDTree(rv_la_tv)
-            _, ind = tree.query(tv_past_points)
-
-            tv_points_bwd[frame] = rv_points[ind]
-            tv_centroids_bwd[frame] = np.mean(tv_points_bwd[frame], axis=0)
-
-        # Combine fwd and backward
-        tv_centroids_disp_fwd = tv_centroids_fwd - tv_centroids_fwd[0]
-        mag_disp_fwd = np.linalg.norm(tv_centroids_disp_fwd, axis=1)
-
-        peak_fwd = np.argmax(mag_disp_fwd)
-
-        tv_points = np.copy(tv_points_fwd)
-        tv_points[peak_fwd:] = tv_points_bwd[peak_fwd:]
-
-        tv_centroids = np.mean(tv_points, axis=1)
-
-        widths = np.linalg.norm(tv_points[:,0,:] - tv_points[:,1,:], axis=1)
-        width_ratio = np.max(widths) / np.min(widths)
-        la_mult += .1
-        it = it + 1
-
-        print(f'Iteration {it}: width ratio = {width_ratio:.2f}, la_mult = {la_mult:.2f}')
-        if it > 10:
-            print('WARNING: Iteration limit reached')
-            break
+        data = seg.data[..., slice, frame]
+        rv = data == seg.labels['rv']
+        lv = data == seg.labels['lv']
         
+        # Get rv border
+        rv_border = rv ^ morphology.binary_erosion(rv)
+        rv_border[morphology.binary_dilation(lv)] = 0
+
+        rv_points = np.column_stack(np.where(rv_border))
+
+        tv_cent = np.mean(tv_points_fwd[frame-1], axis=0)
+        tv_past_points = tv_points_fwd[frame-1] - tv_cent
+
+        tv_past_la = tv_past_points @ la_vector
+        tv_past_tv = tv_past_points @ tv_vector
+        tv_past_points = np.column_stack(( la_mult *tv_past_la, tv_past_tv))
+
+        rv_points_cent = rv_points - tv_cent
+
+        # Get coords
+        rv_la = rv_points_cent @ la_vector
+        rv_tv = rv_points_cent @ tv_vector
+        rv_la_tv = np.column_stack((la_mult *rv_la, rv_tv))
+
+        # Get closest point
+        tree = KDTree(rv_la_tv)
+        _, ind = tree.query(tv_past_points)
+
+        tv_points_fwd[frame] = rv_points[ind]
+        tv_centroids_fwd[frame] = np.mean(tv_points_fwd[frame], axis=0)
+
+    # Same but backwards
+    tv_points_bwd = np.zeros((nframes, 2, 2))
+    tv_centroids_bwd = np.zeros((nframes, 2))
+
+    for frame in reversed(range(nframes)):
+        # Ref frame
+        if frame == nframes-1:
+            tv_cent = np.mean(tv_seg_points, axis=0)
+            tv_past_points = tv_seg_points - tv_cent
+            tv_points_bwd[frame] = tv_seg_points
+            tv_centroids_bwd[frame] = np.mean(tv_points_bwd[frame], axis=0)
+            continue
+
+        data = seg.data[..., slice, frame]
+        rv = data == seg.labels['rv']
+        lv = data == seg.labels['lv']
+        
+        # Get rv border
+        rv_border = rv ^ morphology.binary_erosion(rv)
+        rv_border[morphology.binary_dilation(lv)] = 0
+
+        rv_points = np.column_stack(np.where(rv_border))
+
+        tree = KDTree(rv_points)
+        tv_cent = np.mean(tv_points_bwd[frame+1], axis=0)
+        tv_past_points = tv_points_bwd[frame+1] - tv_cent
+
+
+        tv_past_la = tv_past_points @ la_vector
+        tv_past_tv = tv_past_points @ tv_vector
+        tv_past_points = np.column_stack(( la_mult *tv_past_la, tv_past_tv))
+
+        rv_points_cent = rv_points - tv_cent
+
+        # Get coords
+        rv_la = rv_points_cent @ la_vector
+        rv_tv = rv_points_cent @ tv_vector
+        rv_la_tv = np.column_stack((la_mult *rv_la, rv_tv))
+
+        # Get closest point
+        tree = KDTree(rv_la_tv)
+        _, ind = tree.query(tv_past_points)
+
+        tv_points_bwd[frame] = rv_points[ind]
+        tv_centroids_bwd[frame] = np.mean(tv_points_bwd[frame], axis=0)
+
+    # Combine fwd and backward
+    tv_centroids_disp_fwd = tv_centroids_fwd - tv_centroids_fwd[0]
+    mag_disp_fwd = np.linalg.norm(tv_centroids_disp_fwd, axis=1)
+
+    peak_fwd = np.argmax(mag_disp_fwd)
+
+    tv_points = np.copy(tv_points_fwd)
+    tv_points[peak_fwd:] = tv_points_bwd[peak_fwd:]
+
+    tv_centroids = np.mean(tv_points, axis=1)
+
     return tv_points, tv_centroids
 
 
@@ -378,6 +366,21 @@ def get_3ch_valve_points(seg, mv_seg_points, av_seg_points, slice):
 
 
 def get_4ch_valve_points(seg, mv_seg_points, tv_seg_points, slice):
+
+    if len(tv_seg_points) == 0:
+        mv_inter_points, _ = get_mv_points(seg, slice)
+        mv_disp = mv_inter_points - mv_inter_points[0]
+        mv_points = mv_seg_points + mv_disp
+        mv_centroids = np.mean(mv_points, axis=1)
+        return mv_points, mv_centroids
+    
+    elif len(mv_seg_points) == 0:
+        tv_inter_points, _ = get_tv_points(seg, tv_seg_points, slice)
+        tv_disp = tv_inter_points - tv_inter_points[0]
+        tv_points = tv_seg_points + tv_disp
+        tv_centroids = np.mean(tv_points, axis=1)
+        return tv_points, tv_centroids
+
     # Check if the mv_seg_points have the lateral point first
     tv_cent = np.mean(tv_seg_points, axis=0)
     mv_dist = np.linalg.norm(mv_seg_points - tv_cent, axis=1)

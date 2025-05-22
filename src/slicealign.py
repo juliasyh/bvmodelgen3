@@ -340,13 +340,24 @@ def slice_intersection_error3(translation, ind, slices):
     return error
 
 
-def optimize_stack_translation2(slices, nit=100):
+def optimize_stack_translation2(slices, which='both', nit=100):
     for i in range(nit):
         translations = []
         for n in range(len(slices)):
-            sol = fmin_cg(slice_intersection_error2, np.zeros(2), args=(n,slices), disp=False)
-            translations.append(sol)
-            slices[n].accumulated_translation += sol
+            if which == 'both':
+                sol = fmin_cg(slice_intersection_error2, np.zeros(2), args=(n,slices), disp=False)
+                translations.append(sol)
+                slices[n].accumulated_translation += sol
+            elif which == 'sa':
+                if 'sa' in slices[n].view:
+                    sol = fmin_cg(slice_intersection_error2, np.zeros(2), args=(n,slices), disp=False)
+                    translations.append(sol)
+                    slices[n].accumulated_translation += sol
+            elif which == 'la':
+                if 'la' in slices[n].view:
+                    sol = fmin_cg(slice_intersection_error2, np.zeros(2), args=(n,slices), disp=False)
+                    translations.append(sol)
+                    slices[n].accumulated_translation += sol
 
         translations = np.vstack(translations)
         trans_norm = np.linalg.norm(translations)

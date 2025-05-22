@@ -204,30 +204,33 @@ class PatientData:
                 nslices = self.cmr_data.segs[view].shape[-2]
                 for slice in range(nslices):
                     ijk_all_frames = self.valve_data.mv_points[view][slice]
-                    if ijk_all_frames is None: continue
-                    ijk = ijk_all_frames[frame]
-                    ijk = np.column_stack((ijk, np.full(ijk.shape[0], slice)))
-                    mv_points = self.cmr_data.apply_affine_to_pixcoords(ijk, view)
+                    if ijk_all_frames is not None:
+                        ijk = ijk_all_frames[frame]
+                        ijk = np.column_stack((ijk, np.full(ijk.shape[0], slice)))
+                        mv_points = self.cmr_data.apply_affine_to_pixcoords(ijk, view)
 
-                    # Add to contour list
-                    cont = SegSliceContour(mv_points, 'mv', slice, view)
-                    contours.append(cont)
+                        # Add to contour list
+                        cont = SegSliceContour(mv_points, 'mv', slice, view)
+                        contours.append(cont)
+
                     if '3ch' in view:
                         ijk_all_frames = self.valve_data.av_points[view][slice]
-                        ijk = ijk_all_frames[frame]
-                        ijk = np.column_stack((ijk, np.full(ijk.shape[0], slice)))
-                        av_points = self.cmr_data.apply_affine_to_pixcoords(ijk, view)
-                        # Add to contour list
-                        cont = SegSliceContour(av_points, 'av', slice, view)
-                        contours.append(cont)
+                        if ijk_all_frames is not None:
+                            ijk = ijk_all_frames[frame]
+                            ijk = np.column_stack((ijk, np.full(ijk.shape[0], slice)))
+                            av_points = self.cmr_data.apply_affine_to_pixcoords(ijk, view)
+                            # Add to contour list
+                            cont = SegSliceContour(av_points, 'av', slice, view)
+                            contours.append(cont)
                     if '4ch' in view:
                         ijk_all_frames = self.valve_data.tv_points[view][slice]
-                        ijk = ijk_all_frames[frame]
-                        ijk = np.column_stack((ijk, np.full(ijk.shape[0], slice)))
-                        tv_points = self.cmr_data.apply_affine_to_pixcoords(ijk, view)
-                        # Add to contour list
-                        cont = SegSliceContour(tv_points, 'tv', slice, view)
-                        contours.append(cont)
+                        if ijk_all_frames is not None:
+                            ijk = ijk_all_frames[frame]
+                            ijk = np.column_stack((ijk, np.full(ijk.shape[0], slice)))
+                            tv_points = self.cmr_data.apply_affine_to_pixcoords(ijk, view)
+                            # Add to contour list
+                            cont = SegSliceContour(tv_points, 'tv', slice, view)
+                            contours.append(cont)
 
             # # Add apex
             add_apex(contours, self.cmr_data.segs)
@@ -628,13 +631,14 @@ class CMRSegData:
         return all_frame_slices
     
 
-    def align_frame_slices(self, slices, frame_prefix, nslices, translation_files_prefix=None, method=2, visualize=False):
+    def align_frame_slices(self, slices, frame_prefix, nslices, translation_files_prefix=None, method=2, visualize=False, 
+                           which='both'):
         if translation_files_prefix is None:
             # Compute alignment
             print('Calculating alignment using Sinclair algorithm...')
             slicealign.find_SA_initial_guess(slices)
             if method == 2:
-                slicealign.optimize_stack_translation2(slices, nit=100)
+                slicealign.optimize_stack_translation2(slices, nit=100, which=which)
             elif method == 3:
                 slicealign.optimize_stack_translation3(slices, nit=100)
             translations = slicealign.save_translations(frame_prefix, nslices, slices)
@@ -680,7 +684,7 @@ class CMRSegData:
         return slices, translations
     
 
-    def align_slices(self, all_frame_slices, visualize=False, which_frames=[0]):
+    def align_slices(self, all_frame_slices, visualize=False, which_frames=[0], which='both'):
         print('Aligning slices...')
 
         frame0_prefix = f'{self.img2model_fldr}/frame{0}_'
@@ -699,7 +703,8 @@ class CMRSegData:
 
             # Align slices
             slices, translations = self.align_frame_slices(all_frame_slices[frame], frame_prefix, nslices, 
-                                                           translation_files_prefix=frame0_prefix, visualize=visualize)
+                                                           translation_files_prefix=frame0_prefix, visualize=visualize,
+                                                           which=which)
 
             all_frame_slices_aligned.append(slices)
             all_frame_translations[frame] = translations
@@ -767,7 +772,7 @@ class CMRSegData:
             assert len(la_contours) > 0, 'No LA contours found in frame ' + str(frame)
 
 
-    def extract_contours(self, visualize=True, which_frames=None, align=True):
+    def extract_contours(self, visualize=True, which_frames=None, align='both'):
         # Deal with which_frames
         if which_frames is None:
             which_frames = range(self.nframes)
@@ -783,8 +788,26 @@ class CMRSegData:
 
         # Align slices
         self.all_frame_translations = self.generate_null_translations()    
-        if align:
-            self.all_frame_slices, self.all_frame_translations = self.align_slices(self.all_frame_slices, which_frames=which_frames)
+        if (align == 'both') or (align == True):
+            self.all_frame_slices, self.all_frame_translations = self.align_slices(self.all_frame_slices, 
+                                                                                   which_frames=which_frames,
+                                                                                   which=align)
+        elif align == 'sa':
+            self.all_frame_slices, self.all_frame_translations = self.align_slices(self.all_frame_slices, 
+                                                                                   which_frames=which_frames,
+                                                                                   which='sa')
+        elif align == 'la':
+            self.all_frame_slices, self.all_frame_translations = self.align_slices(self.all_frame_slices, 
+                                                                                   which_frames=which_frames,
+                                                                                   which='la')
+        elif align == 'sa-la':
+            self.all_frame_slices, self.all_frame_translations = self.align_slices(self.all_frame_slices, 
+                                                                                   which_frames=which_frames,
+                                                                                   which='sa')
+            self.all_frame_slices, self.all_frame_translations = self.align_slices(self.all_frame_slices,
+                                                                                      which_frames=which_frames,
+                                                                                      which='la')
+            
             
 
         # Generate contours
@@ -1089,19 +1112,25 @@ class CMRValveData:
                 if nslices > 1:
                     if len(mv_seg_points_slice) == 0:
                         print('WARNING: No MV points found in 4CH view, slice', slice)
-                        continue
                     if len(tv_seg_points_slice) == 0:
                         print('WARNING: No TV points found in 4CH view, slice', slice)
-                        continue
                 else:
                     assert len(mv_seg_points_slice) > 0, 'No MV points found in 4CH view'
                     assert len(tv_seg_points_slice) > 0, 'No TV points found in 4CH view'
 
                 output = vu.get_4ch_valve_points(seg, mv_seg_points_slice, tv_seg_points_slice, slice)
-                self.mv_points[view][slice] = output[0] 
-                self.mv_centroids[view][slice] = output[1]
-                self.tv_points[view][slice] = output[2] 
-                self.tv_centroids[view][slice] = output[3]
+
+                if len(mv_seg_points_slice) == 0:
+                    self.tv_points[view][slice] = output[0] 
+                    self.tv_centroids[view][slice] = output[1]
+                elif len(tv_seg_points_slice) == 0:
+                    self.mv_points[view][slice] = output[0] 
+                    self.mv_centroids[view][slice] = output[1]
+                else:
+                    self.mv_points[view][slice] = output[0] 
+                    self.mv_centroids[view][slice] = output[1]
+                    self.tv_points[view][slice] = output[2] 
+                    self.tv_centroids[view][slice] = output[3]
 
 
     def load_valves_from_nii(self,slices_2ch=[], slices_3ch=[], slices_4ch=[]):

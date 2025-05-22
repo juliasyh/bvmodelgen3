@@ -1350,7 +1350,7 @@ class FittedTemplate:
             self.bvmodel.update_pose_and_scale(self.dataset)
 
             # perform a stiff fit
-            displacement, err = self.bvmodel.lls_fit_model(weight_GP,self.dataset,1e10)
+            displacement, err = self.bvmodel.lls_fit_model(weight_GP,self.dataset,1e5)
             self.bvmodel.control_mesh = np.add(self.bvmodel.control_mesh,
                                                     displacement)
             self.bvmodel.et_pos = np.linalg.multi_dot([self.bvmodel.matrix,

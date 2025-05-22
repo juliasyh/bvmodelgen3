@@ -150,6 +150,19 @@ def optimize_stack_translation(slices, nit=100):
         if trans_norm < 1e-2:
             break
 
+
+def identify_base_apex(contour):
+    length = np.linalg.norm(np.diff(contour, axis=0), axis=1)
+    ind = np.argmax(length)
+
+    point1 = contour[ind]
+    point2 = contour[ind+1] if ind < len(contour)-1 else contour[0]
+    base = (point1 + point2) / 2
+
+    apex = contour[np.argmax(np.linalg.norm(contour - base, axis=1))]
+    return base, apex
+
+
 def slice_intersection_error2(translation, ind, slices):
     sij = []
     contours = ['lvendo', 'lvepisep', 'rvendo']
@@ -160,6 +173,11 @@ def slice_intersection_error2(translation, ind, slices):
         if (contour == 'rvendo') and (not slc.has_rv): continue
         slc_xyz[contour] = slc.get_xyz_trans(contour, translation)  # precompute this
 
+    if ('la' in slc.view):
+        # Find the base and apex of the contour
+        base, apex = identify_base_apex(slc_xyz['lvendo'])
+        la_length = np.linalg.norm(base-apex)
+
     la_slices = []
     sa_slices = []
     for m in range(len(slices)):
@@ -168,9 +186,11 @@ def slice_intersection_error2(translation, ind, slices):
             la_slices.append(slices[m])
         if 'sa' in slices[m].view:
             sa_slices.append(slices[m])
+
         weight=1
         # if m == ind: continue   # skip the same slice
         if slc.view == 'sa' and slices[m].view == 'sa': continue # 'sa slices do not intersect'
+
         # For each contour type I compute the error
         for contour in slc_xyz.keys():
             if (contour == 'rvendo') and (not slices[m].has_rv): continue
@@ -178,6 +198,14 @@ def slice_intersection_error2(translation, ind, slices):
 
             tree = KDTree(slc_xyz[contour])
             distance, _ = tree.query(intersect_points)
+
+            if ('la' in slc.view) and ('la' in slices[m].view): 
+                apex_dist = intersect_points - apex
+                apex_dist = np.linalg.norm(apex_dist, axis=1)
+                apex_dist_norm = apex_dist/la_length
+                
+                apex_dist_norm = np.clip(apex_dist_norm, 0, 1)
+                weight = (1 - apex_dist_norm)
 
             sij.append(distance*weight)
 

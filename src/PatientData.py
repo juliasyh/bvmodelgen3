@@ -1051,6 +1051,11 @@ class CMRValveData:
                 if nslices > 1:
                     if slice not in slices_2ch: continue
                 mv_seg_points_slice = mv_seg_points[mv_seg_points[:,2]==slice][:,0:2]
+
+                if len(mv_seg_points_slice) == 0:
+                    print('WARNING: No MV points found in 3CH view, slice', slice)
+                    continue
+                
                 self.mv_points[view][slice], self.mv_centroids[view][slice] = vu.get_2ch_valve_points(seg, mv_seg_points_slice, slice=slice) 
 
 

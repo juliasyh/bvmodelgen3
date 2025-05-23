@@ -1119,6 +1119,8 @@ class CMRValveData:
                         print('WARNING: No MV points found in 4CH view, slice', slice)
                     if len(tv_seg_points_slice) == 0:
                         print('WARNING: No TV points found in 4CH view, slice', slice)
+                    if len(mv_seg_points_slice) == 0 and len(tv_seg_points_slice) == 0:
+                        continue
                 else:
                     assert len(mv_seg_points_slice) > 0, 'No MV points found in 4CH view'
                     assert len(tv_seg_points_slice) > 0, 'No TV points found in 4CH view'

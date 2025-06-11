@@ -412,12 +412,6 @@ class PatientData:
             surface_mesh = surfaces[frame]
             io.write(f'{self.img2model_fldr}/{prefix}frame{frame}_template.vtu', surface_mesh)
             
-            # Subdivide the mesh
-            if mesh_subdivisions > 0:
-                bvmesh = mu.subdivide_mesh(bvmesh, mesh_subdivisions)
-                valve_mesh = mu.subdivide_mesh(valve_mesh, mesh_subdivisions)
-                septum_mesh = mu.subdivide_mesh(septum_mesh, mesh_subdivisions)
-
             if save_simmodeler:
                 # Extract bvmesh
                 bvmesh = mu.extract_subregion(surface_mesh, labels, bv_regions)
@@ -427,6 +421,12 @@ class PatientData:
 
                 # Extract septum mesh
                 septum_mesh = mu.extract_subregion(surface_mesh, labels, septum_regions)
+
+                # Subdivide the mesh
+                if mesh_subdivisions > 0:
+                    bvmesh = mu.subdivide_mesh(bvmesh, mesh_subdivisions)
+                    valve_mesh = mu.subdivide_mesh(valve_mesh, mesh_subdivisions)
+                    septum_mesh = mu.subdivide_mesh(septum_mesh, mesh_subdivisions)
 
                 io.write(f'{self.img2model_fldr}/{prefix}frame{frame}_bv_surface.stl', bvmesh)
                 io.write(f'{self.img2model_fldr}/{prefix}frame{frame}_valve_surfaces.stl', valve_mesh)
@@ -631,14 +631,13 @@ class CMRSegData:
         return all_frame_slices
     
 
-    def align_frame_slices(self, slices, frame_prefix, nslices, translation_files_prefix=None, method=2, visualize=False, 
-                           which='both'):
+    def align_frame_slices(self, slices, frame_prefix, nslices, translation_files_prefix=None, method=2, visualize=False):
         if translation_files_prefix is None:
             # Compute alignment
             print('Calculating alignment using Sinclair algorithm...')
             slicealign.find_SA_initial_guess(slices)
             if method == 2:
-                slicealign.optimize_stack_translation2(slices, nit=100, which=which)
+                slicealign.optimize_stack_translation2(slices, nit=100)
             elif method == 3:
                 slicealign.optimize_stack_translation3(slices, nit=100)
             translations = slicealign.save_translations(frame_prefix, nslices, slices)
@@ -684,7 +683,7 @@ class CMRSegData:
         return slices, translations
     
 
-    def align_slices(self, all_frame_slices, visualize=False, which_frames=[0], which='both'):
+    def align_slices(self, all_frame_slices, visualize=False, which_frames=[0]):
         print('Aligning slices...')
 
         frame0_prefix = f'{self.img2model_fldr}/frame{0}_'
@@ -703,8 +702,7 @@ class CMRSegData:
 
             # Align slices
             slices, translations = self.align_frame_slices(all_frame_slices[frame], frame_prefix, nslices, 
-                                                           translation_files_prefix=frame0_prefix, visualize=visualize,
-                                                           which=which)
+                                                           translation_files_prefix=frame0_prefix, visualize=visualize)
 
             all_frame_slices_aligned.append(slices)
             all_frame_translations[frame] = translations
@@ -788,26 +786,9 @@ class CMRSegData:
 
         # Align slices
         self.all_frame_translations = self.generate_null_translations()    
-        if (align == 'both') or (align == True):
+        if align:
             self.all_frame_slices, self.all_frame_translations = self.align_slices(self.all_frame_slices, 
-                                                                                   which_frames=which_frames,
-                                                                                   which=align)
-        elif align == 'sa':
-            self.all_frame_slices, self.all_frame_translations = self.align_slices(self.all_frame_slices, 
-                                                                                   which_frames=which_frames,
-                                                                                   which='sa')
-        elif align == 'la':
-            self.all_frame_slices, self.all_frame_translations = self.align_slices(self.all_frame_slices, 
-                                                                                   which_frames=which_frames,
-                                                                                   which='la')
-        elif align == 'sa-la':
-            self.all_frame_slices, self.all_frame_translations = self.align_slices(self.all_frame_slices, 
-                                                                                   which_frames=which_frames,
-                                                                                   which='sa')
-            self.all_frame_slices, self.all_frame_translations = self.align_slices(self.all_frame_slices,
-                                                                                      which_frames=which_frames,
-                                                                                      which='la')
-            
+                                                                                   which_frames=which_frames)
             
 
         # Generate contours
@@ -1414,6 +1395,9 @@ class FittedTemplate:
         pu.plot_surface(model, contourPlots, out_path=self.out_prefix + 'step2_fitted.html')
 
         self.template_mesh = self.bvmodel.get_template_mesh()
+
+        # Save control points
+        np.save(self.out_prefix + 'control_points.npy', self.bvmodel.control_mesh)
 
         if not verbose:
             log1 = out1[1]

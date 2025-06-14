@@ -514,6 +514,27 @@ class PatientData:
         return lv_volume, rv_volume
 
 
+    def write_info(self):
+        if self.cmr_data is None:
+            raise ValueError("CMR data has not been loaded. Please run load_segmentations() first.")
+
+        nframes = self.cmr_data.nframes
+        dt = self.cmr_data.dt
+        cycle_time = nframes * dt / 1000    # To seconds
+        heart_rate = 60 / cycle_time
+
+        info = [
+            f"Number of frames: {nframes}",
+            f"Frame duration (ms): {dt}",
+            f"Cycle time (s): {cycle_time:.3f}",
+            f"Heart rate (bpm): {heart_rate:.2f}"
+        ]
+        info_path = os.path.join(self.output_fldr, "image_info.txt")
+        with open(info_path, "w") as f:
+            for line in info:
+                f.write(line + "\n")
+                
+        print(f"Image info written to {info_path}")
 
 
 class CMRSegData:
@@ -549,8 +570,14 @@ class CMRSegData:
 
         # Read images
         self.imgs = {}
+        self.dt = None  # Initialize dt to None, will be set when reading the first image
         for view, path in img_paths.items():
-            (data, affine, pixdim) = readFromNIFTI(path)
+            if 'interp' not in path and self.dt is None:
+                (data, affine, pixdim, dt) = readFromNIFTI(path, return_slice_duration=True)
+                print(dt)
+                self.dt = dt
+            else:
+                (data, affine, pixdim) = readFromNIFTI(path)
             self.imgs[view] = ViewImgData(view, data, affine, pixdim, path)
 
         # Read segmentations

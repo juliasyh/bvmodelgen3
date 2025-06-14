@@ -13,7 +13,7 @@ import monai.transforms as mt
 import nibabel as nib
 
 
-def readFromNIFTI(imgName, return_header=False):
+def readFromNIFTI(imgName, return_header=False, return_slice_duration=False):
     ''' Helper function used by masks2ContoursSA() and masks2ContoursLA(). Returns (seg, transform, pixSpacing). '''
     # Load NIFTI image and its header.
     if os.path.isfile(imgName):
@@ -32,6 +32,9 @@ def readFromNIFTI(imgName, return_header=False):
 
     if return_header:
         return (data, transform, pixdim, header)
+    elif return_slice_duration:
+        slice_duration = img.meta['slice_duration']
+        return (data, transform, pixdim, slice_duration)
     else:
         return (data, transform, pixdim)
 

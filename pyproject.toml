@@ -25,6 +25,7 @@ dependencies = [
   "scikit-image",
   "monai",
   "nibabel",
+  "simpleitk",
   "tqdm",
   "meshio",
   "trimesh",

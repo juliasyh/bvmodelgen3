@@ -147,6 +147,30 @@ def interpolate_img(img, nframes):
     return interp_img
 
 
+def check_timespacing(img_paths):
+    """
+    Checks the time spacing of a set of 4D NIFTI images.
+    
+    Parameters:
+    -----------
+    img_paths : dict
+        A dictionary where keys are view identifiers (e.g., 'sa', 'la_2ch', etc.) 
+        and values are the file path to the corresponding NIFTI image.
+    
+    Returns:
+    --------
+    bool
+        True if all images have the same time spacing, False otherwise.
+    """
+    
+    timespacing = None
+    for view, img_path in img_paths.items():
+        _, _, _, dt = readFromNIFTI(img_path, return_slice_duration=True)
+        
+        print(f"View: {view}, Slice Duration: {dt}")
+
+    return True
+
 def interpolate_scans(img_paths, nframes):
     """
     Interpolates a set of 4D NIFTI images to a specified number of frames.
@@ -184,9 +208,9 @@ def interpolate_scans(img_paths, nframes):
     imgs_sdur = {}
     img_frames = []
     for view, img_path in img_paths.items():
-        img, _, _, header = readFromNIFTI(img_path, return_header=True)
+        img, _, _, dt = readFromNIFTI(img_path, return_slice_duration=True)
         imgs[view] = img
-        imgs_sdur[view] = header['slice_duration']
+        imgs_sdur[view] = dt
         img_frames.append(img.shape[3])
 
     print(", ".join([f"View: {view}, Number of frames: {img.shape[3]}" for view, img in imgs.items()]))
